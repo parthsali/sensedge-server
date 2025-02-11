@@ -15,7 +15,7 @@ app.get("/", (req, res, next) => {
 });
 
 app.get("/health", (req, res, next) => {
-  res.status(200).json({ message: "API is running" });
+  res.status(200).json({ message: "Server is up and running" });
 });
 
 app.use("/api/v1/auth", authRouter);
