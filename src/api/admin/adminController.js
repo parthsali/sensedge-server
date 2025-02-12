@@ -131,3 +131,36 @@ export const reactivateUser = async (req, res, next) => {
     next(error);
   }
 };
+
+export const createAdmin = async (req, res, next) => {
+  try {
+    const { error } = createUserSchema.validate(req.body);
+
+    if (error) {
+      return next(createHttpError(400, error.message));
+    }
+
+    const { name, email } = req.body;
+
+    // Check if the user already exists
+    const user = await User.findOne({ email });
+
+    if (user) {
+      return next(createHttpError(400, "User already exists"));
+    }
+
+    // randomly generate 6 digit password
+    const password = Math.floor(100000 + Math.random() * 900000).toString();
+
+    const newAdmin = new User({ name, email, password, role: "admin" });
+
+    await newAdmin.save();
+
+    // Send the user details to the user's email
+    await sendUserDetailsTemplate(name, email, password);
+
+    res.status(201).json({ message: "Admin created" });
+  } catch (error) {
+    next(error);
+  }
+};
