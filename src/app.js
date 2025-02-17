@@ -3,6 +3,7 @@ import express from "express";
 import authRouter from "./api/auth/authRouter.js";
 import userRouter from "./api/user/userRouter.js";
 import adminRouter from "./api/admin/adminRouter.js";
+import customerRouter from "./api/customer/customerRouter.js";
 
 import globalErrorHandler from "./middlewares/globalErrorHandler.js";
 
@@ -21,6 +22,7 @@ app.get("/health", (req, res, next) => {
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/admin", adminRouter);
+app.use("/api/v1/customers", customerRouter);
 
 app.use(globalErrorHandler);
 
