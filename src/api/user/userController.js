@@ -1,0 +1,52 @@
+import Config from "./configModel.js";
+import createHttpError from "http-errors";
+import User from "./userModel.js";
+import { Mongoose } from "mongoose";
+
+export const getDefaultUser = async (req, res, next) => {
+  try {
+    const config = await Config.findOne().populate("defaultUser");
+
+    if (!config) {
+      throw createHttpError(404, "Default user not found");
+    }
+
+    const defaultUser = config.defaultUser;
+
+    if (!defaultUser) {
+      throw createHttpError(404, "Default user not found");
+    }
+
+    res.status(200).json({ message: "Default user fetched", defaultUser });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const setDefaultUser = async (req, res, next) => {
+  try {
+    const { userId } = req.body;
+
+    if (!userId) {
+      throw createHttpError(400, "User ID is required");
+    }
+    const user = await User.findById(userId);
+
+    if (!user) {
+      throw createHttpError(404, "User not found");
+    }
+
+    let config = await Config.findOne();
+
+    if (!config) {
+      config = new Config();
+    }
+
+    config.defaultUser = userId;
+    await config.save();
+
+    res.status(200).json({ message: "Default user set", defaultUser: user });
+  } catch (error) {
+    next(error);
+  }
+};
