@@ -1,7 +1,6 @@
 import Config from "./configModel.js";
 import createHttpError from "http-errors";
 import User from "./userModel.js";
-import { Mongoose } from "mongoose";
 
 export const getDefaultUser = async (req, res, next) => {
   try {
