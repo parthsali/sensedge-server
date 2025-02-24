@@ -13,17 +13,21 @@ const templateSchema = new mongoose.Schema(
     },
     mediaFiles: [
       {
-        url: {
+        fileName: {
           type: String,
           required: true,
         },
         type: {
           type: String,
           required: true,
-          enum: ["image", "pdf", "video", "other"],
         },
       },
     ],
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
   },
   { timestamps: true }
 );
