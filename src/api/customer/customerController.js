@@ -1,33 +1,41 @@
 import createHttpError from "http-errors";
 import Customer from "./customerModel.js";
-import {
-  createCustomerValidation,
-  customerValidation,
-} from "./customerValidation.js";
-import Config from "../user/configModel.js";
+import { customerValidation } from "./customerValidation.js";
+import Conversation from "../conversation/conversationModel.js";
 
 export const createCustomer = async (req, res, next) => {
   try {
-    const { error } = createCustomerValidation.validate(req.body);
+    const { error } = customerValidation.validate(req.body);
 
     if (error) {
       return next(createHttpError(400, error.details[0].message));
     }
 
-    const { name, phone, company } = req.body;
+    const { name, phone, company, assigned_user } = req.body;
 
-    const config = await Config.findOne();
+    const existingCustomer = await Customer.findOne({ phone });
 
-    const defaultUser = config.defaultUser || null;
+    if (existingCustomer) {
+      return next(createHttpError(400, "Customer already exists"));
+    }
 
     const customer = new Customer({
       name,
       phone,
       company,
-      assigned_user: defaultUser,
+      assigned_user,
     });
 
     await customer.save();
+
+    // create a conversation for the customer
+    const conversation = new Conversation({
+      customer: customer._id,
+      user: assigned_user,
+      lastMessage: null,
+    });
+
+    await conversation.save();
 
     res.status(201).json({
       message: "Customer created successfully",
@@ -40,9 +48,15 @@ export const createCustomer = async (req, res, next) => {
 
 export const getCustomers = async (req, res, next) => {
   try {
-    const customers = await Customer.find();
+    const customers = await Customer.find().populate(
+      "assigned_user",
+      "name email"
+    );
 
-    res.status(200).json(customers);
+    res.status(200).json({
+      message: "Customers retrieved successfully",
+      customers,
+    });
   } catch (error) {
     next(error);
   }
