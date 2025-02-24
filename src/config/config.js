@@ -10,6 +10,10 @@ const _config = {
   JWT_EXPIRATION: process.env.JWT_EXPIRATION,
   EMAIL_USER: process.env.EMAIL_USER,
   EMAIL_PASSWORD: process.env.EMAIL_PASSWORD,
+  BUCKET_NAME: process.env.BUCKET_NAME,
+  BUCKET_REGION: process.env.BUCKET_REGION,
+  ACCESS_KEY: process.env.ACCESS_KEY,
+  SECRET_ACCESS_KEY: process.env.SECRET_ACCESS_KEY,
 };
 
 export const config = Object.freeze(_config);
