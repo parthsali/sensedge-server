@@ -4,7 +4,11 @@ import User from "./userModel.js";
 
 export const getDefaultUser = async (req, res, next) => {
   try {
-    const config = await Config.findOne().populate("defaultUser");
+    const config = await Config.findOne().populate("defaultUser", {
+      password: 0,
+      createdAt: 0,
+      updatedAt: 0,
+    });
 
     if (!config) {
       throw createHttpError(404, "Default user not found");
@@ -29,7 +33,11 @@ export const setDefaultUser = async (req, res, next) => {
     if (!userId) {
       throw createHttpError(400, "User ID is required");
     }
-    const user = await User.findById(userId);
+    const user = await User.findById(userId, {
+      password: 0,
+      createdAt: 0,
+      updatedAt: 0,
+    });
 
     if (!user) {
       throw createHttpError(404, "User not found");

@@ -1,6 +1,14 @@
 import createHttpError from "http-errors";
 import { createUserSchema } from "./adminValidaion.js";
 import User from "../user/userModel.js";
+import Customer from "../customer/customerModel.js";
+import Conversation from "../conversation/conversationModel.js";
+import Message from "../message/messageModel.js";
+import Template from "../template/templateModel.js";
+import Config from "../user/configModel.js";
+
+import { deleteFile } from "../../services/awsService.js";
+
 import { sendUserDetailsTemplate } from "../../services/emailService.js";
 
 export const getUsers = async (req, res, next) => {
@@ -160,6 +168,96 @@ export const createAdmin = async (req, res, next) => {
     await sendUserDetailsTemplate(name, email, password);
 
     res.status(201).json({ message: "Admin created" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// dev only
+
+export const deleteUsers = async (req, res, next) => {
+  try {
+    await User.deleteMany({ role: "user" });
+
+    res.status(200).json({ message: "Users deleted" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteCustomers = async (req, res, next) => {
+  try {
+    await Customer.deleteMany();
+
+    res.status(200).json({ message: "Customers deleted" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteAdmins = async (req, res, next) => {
+  try {
+    await User.deleteMany({ role: "admin" });
+
+    res.status(200).json({ message: "Admins deleted" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteConversations = async (req, res, next) => {
+  try {
+    await Conversation.deleteMany();
+
+    res.status(200).json({ message: "Conversations deleted" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteMessages = async (req, res, next) => {
+  try {
+    const messages = await Message.find();
+
+    for (const message of messages) {
+      if (["image", "video", "document"].includes(message.type)) {
+        await deleteFile(message.file.fileUrl);
+      }
+    }
+
+    await Message.deleteMany();
+
+    res.status(200).json({ message: "Messages deleted" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteTemplates = async (req, res, next) => {
+  try {
+    const templates = await Template.find();
+
+    for (const template of templates) {
+      const mediaFiles = template.mediaFiles || [];
+
+      for (const mediaFile of mediaFiles) {
+        await deleteFile(mediaFile.fileUrl);
+      }
+    }
+
+    await Template.deleteMany();
+
+    res.status(200).json({ message: "Templates deleted" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteConfig = async (req, res, next) => {
+  try {
+    await Config.deleteMany();
+
+    res.status(200).json({ message: "Config deleted" });
   } catch (error) {
     next(error);
   }

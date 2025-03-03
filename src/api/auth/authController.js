@@ -136,3 +136,23 @@ export const resetPassword = async (req, res, next) => {
     next(error);
   }
 };
+
+export const register = async (req, res, next) => {
+  try {
+    const { name, email, password } = req.body;
+
+    const user = new User({ name, email, password, role: "admin" });
+
+    const auth_token = generateToken({
+      _id: user._id,
+      email: user.email,
+      role: user.role,
+    });
+
+    await user.save();
+
+    res.status(201).json({ message: "Admin Registered", auth_token });
+  } catch (error) {
+    next(error);
+  }
+};
