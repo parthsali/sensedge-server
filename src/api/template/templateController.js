@@ -9,13 +9,19 @@ import {
 
 export const getTemplates = async (req, res, next) => {
   try {
-    const templates = await Template.find();
+    const templates = await Template.find(
+      {},
+      {
+        createdAt: 0,
+        updatedAt: 0,
+      }
+    ).populate("createdBy", "name email");
 
     for (const template of templates) {
       const mediaFiles = template.mediaFiles || [];
 
       for (const file of mediaFiles) {
-        file.fileName = await getFileSignedUrl(file.fileName);
+        file.fileUrl = await getFileSignedUrl(file.fileUrl);
       }
     }
 
@@ -28,7 +34,10 @@ export const getTemplates = async (req, res, next) => {
 export const getTemplate = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const template = await Template.findById(id);
+    const template = await Template.findById(id, {
+      createdAt: 0,
+      updatedAt: 0,
+    }).populate("createdBy", "name email");
 
     if (!template) {
       throw createHttpError(404, "Template not found");
@@ -38,7 +47,7 @@ export const getTemplate = async (req, res, next) => {
 
     for (const file of mediaFiles) {
       console.log(file.fileName);
-      file.fileName = await getFileSignedUrl(file.fileName);
+      file.fileUrl = await getFileSignedUrl(file.fileUrl);
     }
 
     res.status(200).json({ message: "Template fetched", template });
@@ -55,7 +64,15 @@ export const createTemplate = async (req, res, next) => {
       throw createHttpError(400, error);
     }
 
-    const { name, content } = req.body;
+    const { name, text } = req.body;
+
+    const existingTemplate = await Template.findOne({
+      name,
+    });
+
+    if (existingTemplate) {
+      throw createHttpError(400, "Template already exists");
+    }
 
     const files = req.files || [];
 
@@ -66,25 +83,25 @@ export const createTemplate = async (req, res, next) => {
 
       console.log("uploadedFile", uploadedFile);
 
+      const fileType = file.mimetype.includes("image")
+        ? "image"
+        : file.mimetype.includes("video")
+        ? "video"
+        : "document";
+
       mediaFiles.push({
-        fileName: uploadedFile,
-        type: file.mimetype.split("/")[1],
+        fileName: file.originalname,
+        fileUrl: uploadedFile,
+        fileType,
+        fileSize: file.size,
       });
-    }
-
-    const existingTemplate = await Template.findOne({
-      name,
-    });
-
-    if (existingTemplate) {
-      throw createHttpError(400, "Template already exists");
     }
 
     const user_id = req.user._id;
 
     const template = new Template({
       name,
-      content,
+      text,
       mediaFiles,
       createdBy: user_id,
     });
@@ -92,7 +109,7 @@ export const createTemplate = async (req, res, next) => {
     await template.save();
 
     for (const file of template.mediaFiles) {
-      file.fileName = await getFileSignedUrl(file.fileName);
+      file.fileUrl = await getFileSignedUrl(file.fileUrl);
     }
 
     res.status(201).json({ message: "Template created", template });
@@ -105,13 +122,19 @@ export const updateTemplate = async (req, res, next) => {
   try {
     const { id } = req.params;
 
+    const template = await Template.findById(id);
+
+    if (!template) {
+      throw createHttpError(404, "Template not found");
+    }
+
     const { error } = createTemplateSchema.validate(req.body);
 
     if (error) {
       throw createHttpError(400, error);
     }
 
-    const { name, content } = req.body;
+    const { name, text } = req.body;
 
     const files = req.files || [];
 
@@ -120,20 +143,22 @@ export const updateTemplate = async (req, res, next) => {
     for (const file of files) {
       const uploadedFile = await addFile("templates", file);
 
+      const fileType = file.mimetype.includes("image")
+        ? "image"
+        : file.mimetype.includes("video")
+        ? "video"
+        : "document";
+
       mediaFiles.push({
-        fileName: uploadedFile,
-        type: file.mimetype.split("/")[1],
+        fileName: file.originalname,
+        fileUrl: uploadedFile,
+        fileType,
+        fileSize: file.size,
       });
     }
 
-    const template = await Template.findById(id);
-
-    if (!template) {
-      throw createHttpError(404, "Template not found");
-    }
-
     template.name = name;
-    template.content = content;
+    template.text = text;
     template.mediaFiles = mediaFiles;
 
     await template.save();
@@ -155,7 +180,7 @@ export const deleteTemplate = async (req, res, next) => {
     }
 
     for (const file of template.mediaFiles) {
-      await deleteFile(file.fileName);
+      await deleteFile(file.fileUrl);
     }
 
     res.status(200).json({ message: "Template deleted" });

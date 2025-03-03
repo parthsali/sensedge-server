@@ -7,7 +7,7 @@ const templateSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
-    content: {
+    text: {
       type: String,
       required: true,
     },
@@ -17,8 +17,17 @@ const templateSchema = new mongoose.Schema(
           type: String,
           required: true,
         },
-        type: {
+        fileUrl: {
           type: String,
+          required: true,
+        },
+        fileType: {
+          type: String,
+          enum: ["image", "video", "document"],
+          required: true,
+        },
+        fileSize: {
+          type: Number,
           required: true,
         },
       },
