@@ -5,10 +5,17 @@ import { getFileSignedUrl } from "../../services/awsService.js";
 
 export const getAllConversations = async (req, res, next) => {
   try {
-    const conversations = await Conversation.find()
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const skip = (page - 1) * limit;
+
+    const conversations = await Conversation.find({}, { createdAt: 0 })
       .populate("user", "name email")
       .populate("customer", "name phone company")
-      .populate("lastMessage", "senderType content mediaFiles createdAt");
+      .populate("lastMessage", "type text file createdAt")
+      .sort({ updatedAt: -1 })
+      .limit(limit)
+      .skip(skip);
 
     if (!conversations) {
       return next(createHttpError(404, "Conversations not found"));
@@ -24,9 +31,18 @@ export const getAllConversations = async (req, res, next) => {
 
 export const getUserConversations = async (req, res, next) => {
   try {
-    const conversations = await Conversation.find({ user: req.user._id })
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const skip = (page - 1) * limit;
+    const conversations = await Conversation.find(
+      { user: req.user._id },
+      { user: 0, createdAt: 0 }
+    )
       .populate("customer", "name phone company")
-      .populate("lastMessage", "senderType content mediaFiles createdAt");
+      .populate("lastMessage", "type text file createdAt")
+      .sort({ updatedAt: -1 })
+      .limit(limit)
+      .skip(skip);
 
     if (!conversations) {
       return next(createHttpError(404, "Conversations not found"));
@@ -60,7 +76,10 @@ export const getConversationMessages = async (req, res, next) => {
     const limit = parseInt(req.query.limit) || 50;
     const skip = (page - 1) * limit;
 
-    const messages = await Message.find({ conversation: req.params.id })
+    const messages = await Message.find(
+      { conversation: req.params.id },
+      { conversation: 0, updatedAt: 0 }
+    )
       .sort({
         createdAt: -1,
       })
@@ -68,12 +87,8 @@ export const getConversationMessages = async (req, res, next) => {
       .skip(skip);
 
     for (const message of messages) {
-      if (message.mediaFiles && message.mediaFiles.length > 0) {
-        for (let i = 0; i < message.mediaFiles.length; i++) {
-          message.mediaFiles[i].fileName = await getFileSignedUrl(
-            message.mediaFiles[i].fileName
-          );
-        }
+      if (["image", "video", "document"].includes(message.type)) {
+        message.file.fileUrl = await getFileSignedUrl(message.file.fileUrl);
       }
     }
 
