@@ -9,6 +9,7 @@ import User from "../user/userModel.js";
 import OTP from "./otpModel.js";
 import { generateToken, verifyToken } from "../../utils/jwtUtils.js";
 import { sendPasswordResetTemplate } from "../../services/emailService.js";
+import { v4 as uuidv4 } from "uuid";
 
 export const login = async (req, res, next) => {
   try {
@@ -171,7 +172,13 @@ export const register = async (req, res, next) => {
   try {
     const { name, email, password } = req.body;
 
-    const user = new User({ name, email, password, role: "admin" });
+    const user = new User({
+      _id: `admin_${uuidv4()}`,
+      name,
+      email,
+      password,
+      role: "admin",
+    });
 
     const auth_token = generateToken({
       _id: user._id,

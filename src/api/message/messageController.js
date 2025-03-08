@@ -195,12 +195,12 @@ export const sendTemplate = async (req, res, next) => {
       );
     }
 
-    const senderType = user.role;
+    const author = user._id;
 
     if (template.text !== "") {
       const newMessage = new Message({
         conversation: conversationId,
-        senderType,
+        author,
         type: "text",
         text: template.text,
       });
@@ -212,20 +212,19 @@ export const sendTemplate = async (req, res, next) => {
       });
     }
 
-    const mediaFiles = template.mediaFiles || [];
+    const files = template.files || [];
 
-    for (let i = 0; i < mediaFiles.length; i++) {
-      const fileData = mediaFiles[i];
+    for (let i = 0; i < files.length; i++) {
+      const fileData = files[i];
 
       const newMessage = new Message({
         conversation: conversationId,
-        senderType,
-        type: fileData.fileType,
-        file: {
-          fileName: fileData.fileName,
-          fileUrl: fileData.fileUrl,
-          fileSize: fileData.fileSize,
-        },
+        author,
+        type: fileData.type,
+        name: fileData.name,
+        size: fileData.size,
+        url: fileData.url,
+        mimeType: fileData.mimeType,
       });
 
       await newMessage.save();

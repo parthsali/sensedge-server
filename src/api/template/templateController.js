@@ -77,39 +77,38 @@ export const createTemplate = async (req, res, next) => {
     const files = req.files || [];
 
     const mediaFiles = [];
-
     for (const file of files) {
       const uploadedFile = await addFile("templates", file);
 
-      console.log("uploadedFile", uploadedFile);
-
-      const fileType = file.mimetype.includes("image")
+      const type = file.mimetype.includes("image")
         ? "image"
         : file.mimetype.includes("video")
         ? "video"
-        : "document";
+        : "file";
 
       mediaFiles.push({
-        fileName: file.originalname,
-        fileUrl: uploadedFile,
-        fileType,
-        fileSize: file.size,
+        name: file.originalname,
+        type: type,
+        url: uploadedFile,
+        size: file.size,
       });
     }
 
     const user_id = req.user._id;
 
+    console.log("user id", user_id);
+
     const template = new Template({
       name,
       text,
-      mediaFiles,
+      files: mediaFiles,
       createdBy: user_id,
     });
 
     await template.save();
 
-    for (const file of template.mediaFiles) {
-      file.fileUrl = await getFileSignedUrl(file.fileUrl);
+    for (const file of template.files) {
+      file.url = await getFileSignedUrl(file.url);
     }
 
     res.status(201).json({ message: "Template created", template });

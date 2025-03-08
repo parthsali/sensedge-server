@@ -12,7 +12,7 @@ export const getAllConversations = async (req, res, next) => {
     const conversations = await Conversation.find({}, { createdAt: 0 })
       .populate("user", "name email")
       .populate("customer", "name phone company")
-      .populate("lastMessage", "type text file createdAt")
+      .populate("lastMessage", "type text name createdAt")
       .sort({ updatedAt: -1 })
       .limit(limit)
       .skip(skip);
@@ -39,7 +39,7 @@ export const getUserConversations = async (req, res, next) => {
       { user: 0, createdAt: 0 }
     )
       .populate("customer", "name phone company")
-      .populate("lastMessage", "type text file createdAt")
+      .populate("lastMessage", "type text name createdAt")
       .sort({ updatedAt: -1 })
       .limit(limit)
       .skip(skip);
@@ -56,7 +56,6 @@ export const getUserConversations = async (req, res, next) => {
 
 export const getConversationMessages = async (req, res, next) => {
   try {
-    console.log("Requesting messages");
     const conversation = await Conversation.findById(req.params.id);
 
     // check if that conversation exists

@@ -5,35 +5,35 @@ const templateSchema = new mongoose.Schema(
     name: {
       type: String,
       required: true,
-      unique: true,
     },
     text: {
       type: String,
       required: true,
     },
-    mediaFiles: [
+    files: [
       {
-        fileName: {
+        name: {
           type: String,
           required: true,
         },
-        fileUrl: {
+        type: {
           type: String,
+          enum: ["image", "video", "file"],
           required: true,
         },
-        fileType: {
+        url: {
           type: String,
-          enum: ["image", "video", "document"],
-          required: true,
         },
-        fileSize: {
+        size: {
           type: Number,
-          required: true,
+        },
+        mimeType: {
+          type: String,
         },
       },
     ],
     createdBy: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: String,
       ref: "User",
       required: true,
     },
