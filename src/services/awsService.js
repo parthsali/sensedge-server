@@ -62,6 +62,7 @@ export const getFileSignedUrl = async (fileName) => {
   const command = new GetObjectCommand({
     Bucket: config.BUCKET_NAME,
     Key: fileName,
+    region: config.BUCKET_REGION,
   });
 
   const signedUrl = await getSignedUrl(s3, command);
