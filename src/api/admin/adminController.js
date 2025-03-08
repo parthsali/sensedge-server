@@ -244,10 +244,10 @@ export const deleteTemplates = async (req, res, next) => {
     const templates = await Template.find();
 
     for (const template of templates) {
-      const mediaFiles = template.mediaFiles || [];
+      const files = template.files || [];
 
-      for (const mediaFile of mediaFiles) {
-        await deleteFile(mediaFile.fileUrl);
+      for (const file of files) {
+        await deleteFile(file.url);
       }
     }
 
