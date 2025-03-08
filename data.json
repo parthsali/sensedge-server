@@ -1,0 +1,109 @@
+[
+  {
+    "author": {
+      "id": "agent-001"
+    },
+    "createdAt": 1655648404000,
+    "id": "msg1",
+    "status": "seen",
+    "text": "Thank you for confirming. Your AirClean 3000 should now function normally after the reset. If you have further issues, please let us know.",
+    "type": "text"
+  },
+  {
+    "author": {
+      "id": "customer-001"
+    },
+    "createdAt": 1655648403000,
+    "id": "msg2",
+    "status": "seen",
+    "text": "Thanks, it works now! I appreciate your help.",
+    "type": "text"
+  },
+  {
+    "author": {
+      "id": "agent-001"
+    },
+    "createdAt": 1655648402000,
+    "id": "msg3",
+    "status": "seen",
+    "text": "I've attached a quick troubleshooting guide for your reference.",
+    "type": "text"
+  },
+  {
+    "author": {
+      "id": "agent-001"
+    },
+    "createdAt": 1655648401000,
+    "id": "msg4",
+    "status": "seen",
+    "mimeType": "application/pdf",
+    "name": "AirClean3000_Manual.pdf",
+    "size": 2048000,
+    "type": "file",
+    "uri": "https://example.com/AirClean3000_Manual.pdf"
+  },
+  {
+    "author": {
+      "id": "agent-001"
+    },
+    "createdAt": 1655648400000,
+    "id": "msg5",
+    "status": "seen",
+    "name": "diagnostic",
+    "size": 500000,
+    "type": "image",
+    "uri": "https://images.unsplash.com/photo-1539037116277-4db20889f2d4",
+    "width": 1920,
+    "height": 1280
+  },
+  {
+    "author": {
+      "id": "customer-001"
+    },
+    "createdAt": 1655624464000,
+    "id": "msg6",
+    "status": "seen",
+    "text": "The display was showing error code 404 repeatedly.",
+    "type": "text"
+  },
+  {
+    "author": {
+      "id": "agent-001"
+    },
+    "createdAt": 1655624463000,
+    "id": "msg7",
+    "status": "seen",
+    "text": "That error usually indicates a temporary connectivity glitch.",
+    "type": "text"
+  },
+  {
+    "author": {
+      "id": "customer-001"
+    },
+    "createdAt": 1655624462000,
+    "id": "msg8",
+    "status": "seen",
+    "text": "Hi, I need help with my AirClean 3000. The display has been flickering and showing error codes.",
+    "type": "text"
+  },
+  {
+    "author": {
+      "id": "agent-001"
+    },
+    "createdAt": 1655624461000,
+    "id": "msg9",
+    "status": "seen",
+    "text": "Hello, I'm here to help. Could you please tell me if the error appears continuously?",
+    "type": "text"
+  },
+  {
+    "author": {
+      "id": "customer-001"
+    },
+    "createdAt": 1655624460000,
+    "id": "msg10",
+    "status": "seen",
+    "text": "I've just received my AirClean 3000 and I'm encountering issues with the display panel.",
+    "type": "text"
+  }
+]
