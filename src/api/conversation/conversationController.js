@@ -99,7 +99,7 @@ export const getConversationMessages = async (req, res, next) => {
       .status(200)
       .json({ message: "Messages fetched successfully", messages });
   } catch (error) {
-    next(createHttpError(500, "Internal server error"));
+    next(createHttpError(500, error.message));
   }
 };
 
