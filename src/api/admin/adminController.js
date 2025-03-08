@@ -226,8 +226,8 @@ export const deleteMessages = async (req, res, next) => {
     const messages = await Message.find();
 
     for (const message of messages) {
-      if (["image", "video", "document"].includes(message.type)) {
-        await deleteFile(message.file.fileUrl);
+      if (["image", "video", "file"].includes(message.type)) {
+        await deleteFile(message.url);
       }
     }
 
