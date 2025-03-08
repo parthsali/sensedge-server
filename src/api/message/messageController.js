@@ -52,7 +52,9 @@ export const sendMessage = async (req, res, next) => {
         lastMessage: newMessage._id,
       });
 
-      return res.status(201).json({ message: "Message sent successfully" });
+      return res
+        .status(201)
+        .json({ message: "Message sent successfully", message: newMessage });
     }
 
     const file = req.file;
