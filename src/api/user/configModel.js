@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 const configSchema = new mongoose.Schema(
   {
     defaultUser: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: String,
       ref: "User",
       default: null,
     },

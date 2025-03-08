@@ -2,6 +2,7 @@ import createHttpError from "http-errors";
 import Customer from "./customerModel.js";
 import { customerValidation } from "./customerValidation.js";
 import Conversation from "../conversation/conversationModel.js";
+import { v4 as uuidv4 } from "uuid";
 
 export const createCustomer = async (req, res, next) => {
   try {
@@ -20,6 +21,7 @@ export const createCustomer = async (req, res, next) => {
     }
 
     const customer = new Customer({
+      _id: `customer_${uuidv4()}`,
       name,
       phone,
       company,

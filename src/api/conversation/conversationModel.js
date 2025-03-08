@@ -3,11 +3,11 @@ import mongoose from "mongoose";
 const conversationSchema = new mongoose.Schema(
   {
     customer: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: String,
       ref: "Customer",
     },
     user: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: String,
       ref: "User",
     },
     unreadCount: {

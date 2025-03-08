@@ -6,6 +6,7 @@ import Conversation from "../conversation/conversationModel.js";
 import Message from "../message/messageModel.js";
 import Template from "../template/templateModel.js";
 import Config from "../user/configModel.js";
+import { v4 as uuidv4 } from "uuid";
 
 import { deleteFile } from "../../services/awsService.js";
 
@@ -67,7 +68,12 @@ export const createUser = async (req, res, next) => {
     // randomly generate 6 digit password
     const password = Math.floor(100000 + Math.random() * 900000).toString();
 
-    const newUser = new User({ name, email, password });
+    const newUser = new User({
+      _id: `user_${uuidv4()}`,
+      name,
+      email,
+      password,
+    });
 
     await newUser.save();
 

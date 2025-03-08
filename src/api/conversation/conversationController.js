@@ -56,6 +56,7 @@ export const getUserConversations = async (req, res, next) => {
 
 export const getConversationMessages = async (req, res, next) => {
   try {
+    console.log("Requesting messages");
     const conversation = await Conversation.findById(req.params.id);
 
     // check if that conversation exists
@@ -72,6 +73,7 @@ export const getConversationMessages = async (req, res, next) => {
         createHttpError(403, "You are not allowed to view this conversation")
       );
     }
+
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 50;
     const skip = (page - 1) * limit;
@@ -87,8 +89,8 @@ export const getConversationMessages = async (req, res, next) => {
       .skip(skip);
 
     for (const message of messages) {
-      if (["image", "video", "document"].includes(message.type)) {
-        message.file.fileUrl = await getFileSignedUrl(message.file.fileUrl);
+      if (["image", "video", "file"].includes(message.type)) {
+        message.url = await getFileSignedUrl(message.url);
       }
     }
 

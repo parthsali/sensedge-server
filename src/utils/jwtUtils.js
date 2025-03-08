@@ -7,9 +7,9 @@ import { config } from "../config/config.js";
 //   email: user.email,
 //   role: user.role,
 // }
-export const generateToken = (payload) => {
+export const generateToken = (payload, expiresIn = config.JWT_EXPIRATION) => {
   const auth_token = jwt.sign(payload, config.JWT_SECRET, {
-    expiresIn: config.JWT_EXPIRATION,
+    expiresIn: expiresIn,
   });
   return auth_token;
 };

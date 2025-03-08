@@ -4,6 +4,7 @@ import { sendMessageSchema, sendTemplateSchema } from "./messageValidation.js";
 import { addFile } from "../../services/awsService.js";
 import Conversation from "../conversation/conversationModel.js";
 import Template from "../template/templateModel.js";
+import Customer from "../customer/customerModel.js";
 
 export const sendMessage = async (req, res, next) => {
   try {
@@ -33,14 +34,14 @@ export const sendMessage = async (req, res, next) => {
       );
     }
 
-    const senderType = user.role === "user" ? "user" : "admin";
+    const author = user._id;
 
     if (type === "text") {
       const { text } = req.body;
 
       const newMessage = new Message({
         conversation: conversationId,
-        senderType,
+        author,
         type: "text",
         text,
       });
@@ -62,22 +63,14 @@ export const sendMessage = async (req, res, next) => {
 
     const uploadedFile = await addFile("messages", file);
 
-    const fileMimeType = file.mimetype.split("/")[1];
-
-    const fileData = {
-      fileName: file.originalname,
-      fileUrl: uploadedFile,
-      fileMimeType,
-      fileSize: file.size,
-    };
-
-    console.log("fileData", fileData);
-
     const newMessage = new Message({
       conversation: conversationId,
-      senderType,
+      author,
       type,
-      file: fileData,
+      name: file.originalname,
+      size: file.size,
+      url: uploadedFile,
+      mimeType: file.mimetype,
     });
 
     await newMessage.save();
@@ -108,14 +101,18 @@ export const receiveMessage = async (req, res, next) => {
       throw createHttpError(404, "Conversation not found");
     }
 
-    const senderType = "customer";
+    const author = conversation.customer;
+
+    if (!author) {
+      throw createHttpError(404, "Customer not found");
+    }
 
     if (type === "text") {
       const { text } = req.body;
 
       const newMessage = new Message({
         conversation: conversationId,
-        senderType,
+        author,
         type: "text",
         text,
       });
@@ -139,22 +136,14 @@ export const receiveMessage = async (req, res, next) => {
 
     const uploadedFile = await addFile("messages", file);
 
-    const fileMimeType = file.mimetype.split("/")[1];
-
-    const fileData = {
-      fileName: file.originalname,
-      fileUrl: uploadedFile,
-      fileMimeType,
-      fileSize: file.size,
-    };
-
-    console.log("fileData", fileData);
-
     const newMessage = new Message({
       conversation: conversationId,
-      senderType,
+      author,
       type,
-      file: fileData,
+      name: file.originalname,
+      size: file.size,
+      url: uploadedFile,
+      mimeType: file.mimetype,
     });
 
     await newMessage.save();

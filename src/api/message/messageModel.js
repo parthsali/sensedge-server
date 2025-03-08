@@ -7,34 +7,30 @@ const messageSchema = new mongoose.Schema(
       ref: "Conversation",
       required: true,
     },
-    senderType: {
+    author: {
       type: String,
-      enum: ["user", "customer", "admin"],
+      ref: "User" || "Customer",
       required: true,
     },
     type: {
       type: String,
-      enum: ["text", "image", "video", "document"],
+      enum: ["text", "image", "video", "file"],
       required: true,
     },
     text: {
       type: String,
     },
-    file: {
-      type: {
-        fileName: {
-          type: String,
-        },
-        fileUrl: {
-          type: String,
-        },
-        fileMimeType: {
-          type: String,
-        },
-        fileSize: {
-          type: Number,
-        },
-      },
+    name: {
+      type: String,
+    },
+    size: {
+      type: Number,
+    },
+    url: {
+      type: String,
+    },
+    mimeType: {
+      type: String,
     },
     status: {
       type: String,
