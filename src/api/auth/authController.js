@@ -3,10 +3,11 @@ import {
   loginSchema,
   resetPasswordSchema,
   userSchema,
+  verifyOTPSchema,
 } from "./authValidation.js";
 import User from "../user/userModel.js";
 import OTP from "./otpModel.js";
-import { generateToken } from "../../utils/jwtUtils.js";
+import { generateToken, verifyToken } from "../../utils/jwtUtils.js";
 import { sendPasswordResetTemplate } from "../../services/emailService.js";
 
 export const login = async (req, res, next) => {
@@ -103,6 +104,35 @@ export const forgotPassword = async (req, res, next) => {
   }
 };
 
+export const verifyOTP = async (req, res, next) => {
+  try {
+    const { error } = verifyOTPSchema.validate(req.body);
+
+    if (error) {
+      throw createHttpError(400, error.message);
+    }
+
+    const { email, otp } = req.body;
+
+    const otpDoc = await OTP.findOne({ email, otp });
+
+    if (!otpDoc) {
+      throw createHttpError(404, "Invalid OTP");
+    }
+
+    const token = generateToken(
+      {
+        email,
+      },
+      "30m"
+    );
+
+    res.status(200).json({ message: "OTP verified successfully", token });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const resetPassword = async (req, res, next) => {
   try {
     const { error } = resetPasswordSchema.validate(req.body);
@@ -111,7 +141,15 @@ export const resetPassword = async (req, res, next) => {
       throw createHttpError(400, error.message);
     }
 
-    const { email, otp, password } = req.body;
+    const { token, password } = req.body;
+
+    const decoded = verifyToken(token);
+
+    if (!decoded) {
+      throw createHttpError(401, "Invalid or expired token");
+    }
+
+    const { email } = decoded;
 
     const user = await User.findOne({ email });
 
@@ -119,17 +157,9 @@ export const resetPassword = async (req, res, next) => {
       throw createHttpError(404, "User not found");
     }
 
-    const otpDoc = await OTP.findOne({ email, otp });
-
-    if (!otpDoc) {
-      throw createHttpError(404, "Invalid OTP");
-    }
-
     user.password = password;
 
     await user.save();
-
-    await OTP.deleteMany({ email });
 
     res.status(200).json({ message: "Password reset successful" });
   } catch (error) {

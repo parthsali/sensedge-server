@@ -14,7 +14,11 @@ export const userSchema = Joi.object({
 });
 
 export const resetPasswordSchema = Joi.object({
+  token: Joi.string().required(),
+  password: Joi.string().required(),
+});
+
+export const verifyOTPSchema = Joi.object({
   email: Joi.string().email().required(),
   otp: Joi.string().required(),
-  password: Joi.string().required(),
 });
