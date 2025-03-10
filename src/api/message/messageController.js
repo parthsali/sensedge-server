@@ -4,7 +4,7 @@ import { sendMessageSchema, sendTemplateSchema } from "./messageValidation.js";
 import { addFile } from "../../services/awsService.js";
 import Conversation from "../conversation/conversationModel.js";
 import Template from "../template/templateModel.js";
-import Customer from "../customer/customerModel.js";
+import { getFileSignedUrl } from "../../services/awsService.js";
 
 export const sendMessage = async (req, res, next) => {
   try {
@@ -81,7 +81,11 @@ export const sendMessage = async (req, res, next) => {
       lastMessage: newMessage._id,
     });
 
-    return res.status(201).json({ message: "Message sent successfully" });
+    newMessage.url = await getFileSignedUrl(newMessage.url);
+
+    return res
+      .status(201)
+      .json({ message: "Message sent successfully", messageData: newMessage });
   } catch (err) {
     next(err);
   }
