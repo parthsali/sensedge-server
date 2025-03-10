@@ -12,7 +12,7 @@ export const getAllConversations = async (req, res, next) => {
     const conversations = await Conversation.find({}, { createdAt: 0 })
       .populate("user", "name email")
       .populate("customer", "name phone company")
-      .populate("lastMessage", "type text name createdAt")
+      .populate("lastMessage")
       .sort({ updatedAt: -1 })
       .limit(limit)
       .skip(skip);
@@ -90,8 +90,9 @@ export const getConversationMessages = async (req, res, next) => {
     console.log("working one");
     for (const message of messages) {
       if (["image", "video", "file"].includes(message.type)) {
-        console.log("message.url", message.url);
+        console.log("message.url before", message.url);
         message.url = await getFileSignedUrl(message.url);
+        console.log("message.url after", message.url);
       }
     }
 
