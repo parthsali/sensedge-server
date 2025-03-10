@@ -56,7 +56,7 @@ export const createUser = async (req, res, next) => {
       return next(createHttpError(400, error.message));
     }
 
-    const { name, email } = req.body;
+    const { name, email, employeeId } = req.body;
 
     // Check if the user already exists
     const user = await User.findOne({ email });
@@ -70,6 +70,7 @@ export const createUser = async (req, res, next) => {
 
     const newUser = new User({
       _id: `user_${uuidv4()}`,
+      employeeId,
       name,
       email,
       password,
