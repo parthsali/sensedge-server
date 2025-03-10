@@ -16,9 +16,19 @@ export const getUsers = async (req, res, next) => {
   try {
     const users = await User.find({ role: "user" }, { password: 0 });
 
+    const usersData = [];
+    for (const user of users) {
+      const customers = await Customer.find({ assigned_user: user._id });
+
+      usersData.push({
+        ...user._doc,
+        customers,
+      });
+    }
+
     res.status(200).json({
       message: "Users fetched",
-      users,
+      users: usersData,
     });
   } catch (error) {
     next(error);
@@ -39,9 +49,16 @@ export const getUser = async (req, res, next) => {
       return next(createHttpError(404, "User not found"));
     }
 
+    const customers = await Customer.find({ assigned_user: id });
+
+    const userData = {
+      ...user._doc,
+      customers,
+    };
+
     res.status(200).json({
       message: "User fetched",
-      user,
+      user: userData,
     });
   } catch (error) {
     next(error);
