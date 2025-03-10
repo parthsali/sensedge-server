@@ -6,11 +6,14 @@ import Conversation from "../conversation/conversationModel.js";
 import Message from "../message/messageModel.js";
 import Template from "../template/templateModel.js";
 import Config from "../user/configModel.js";
-import { v4 as uuidv4 } from "uuid";
 
 import { deleteFile } from "../../services/awsService.js";
 
 import { sendUserDetailsTemplate } from "../../services/emailService.js";
+
+import { customAlphabet } from "nanoid";
+
+const nanoid = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 12);
 
 export const getUsers = async (req, res, next) => {
   try {
@@ -86,7 +89,7 @@ export const createUser = async (req, res, next) => {
     const password = Math.floor(100000 + Math.random() * 900000).toString();
 
     const newUser = new User({
-      _id: `user_${uuidv4()}`,
+      _id: `user-${nanoid()}`,
       employeeId,
       name,
       email,

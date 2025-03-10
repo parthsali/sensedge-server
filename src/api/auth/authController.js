@@ -9,7 +9,10 @@ import User from "../user/userModel.js";
 import OTP from "./otpModel.js";
 import { generateToken, verifyToken } from "../../utils/jwtUtils.js";
 import { sendPasswordResetTemplate } from "../../services/emailService.js";
-import { v4 as uuidv4 } from "uuid";
+
+import { customAlphabet } from "nanoid";
+
+const nanoid = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 12);
 
 export const login = async (req, res, next) => {
   try {
@@ -173,7 +176,8 @@ export const register = async (req, res, next) => {
     const { name, email, password } = req.body;
 
     const user = new User({
-      _id: `admin_${uuidv4()}`,
+      _id: `admin-${nanoid()}`,
+      employeeId: `admin-01`,
       name,
       email,
       password,

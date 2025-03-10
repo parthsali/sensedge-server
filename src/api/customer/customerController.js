@@ -2,7 +2,9 @@ import createHttpError from "http-errors";
 import Customer from "./customerModel.js";
 import { customerValidation } from "./customerValidation.js";
 import Conversation from "../conversation/conversationModel.js";
-import { v4 as uuidv4 } from "uuid";
+import { customAlphabet } from "nanoid";
+
+const nanoid = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 12);
 
 export const createCustomer = async (req, res, next) => {
   try {
@@ -21,7 +23,7 @@ export const createCustomer = async (req, res, next) => {
     }
 
     const customer = new Customer({
-      _id: `customer_${uuidv4()}`,
+      _id: `customer-${nanoid()}`,
       name,
       phone,
       company,
