@@ -56,10 +56,12 @@ export const getUserConversations = async (req, res, next) => {
       return next(createHttpError(404, "Conversations not found"));
     }
 
-    if (["image", "video", "file"].includes(conversations.lastMessage.type)) {
-      conversations.lastMessage.url = await getFileSignedUrl(
-        conversations.lastMessage.url
-      );
+    for (const conversation of conversations) {
+      if (["image", "video", "file"].includes(conversation.lastMessage.type)) {
+        conversation.lastMessage.url = await getFileSignedUrl(
+          conversation.lastMessage.url
+        );
+      }
     }
 
     res.status(200).json({ conversations });
