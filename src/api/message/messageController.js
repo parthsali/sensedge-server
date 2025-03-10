@@ -91,6 +91,46 @@ export const sendMessage = async (req, res, next) => {
   }
 };
 
+export const updateMessageStatus = async (req, res, next) => {
+  try {
+    const { messageId } = req.params;
+
+    const message = await Message.findById(messageId);
+
+    if (!message) {
+      throw createHttpError(404, "Message not found");
+    }
+
+    const user = req.user;
+
+    if (
+      message.author.toString() !== user._id.toString() &&
+      user.role !== "admin"
+    ) {
+      throw createHttpError(
+        403,
+        "You are not allowed to update the status of this message"
+      );
+    }
+
+    const { status } = req.body;
+
+    if (status !== "read") {
+      throw createHttpError(400, "Invalid status");
+    }
+
+    message.status = status;
+
+    await message.save();
+
+    return res
+      .status(200)
+      .json({ message: "Message status updated", updatedMessage: message });
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const receiveMessage = async (req, res, next) => {
   try {
     const { error } = sendMessageSchema.validate(req.body);
