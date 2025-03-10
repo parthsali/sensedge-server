@@ -39,7 +39,7 @@ export const getUserConversations = async (req, res, next) => {
       { user: 0, createdAt: 0 }
     )
       .populate("customer", "name phone company")
-      .populate("lastMessage", "type text name createdAt")
+      .populate("lastMessage")
       .sort({ updatedAt: -1 })
       .limit(limit)
       .skip(skip);
