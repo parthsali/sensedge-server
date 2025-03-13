@@ -4,6 +4,7 @@ import {
   getCustomer,
   getCustomers,
   updateCustomer,
+  bulkAdd,
 } from "./customerController.js";
 import { auth } from "../../middlewares/authMiddleware.js";
 
@@ -13,4 +14,7 @@ router.post("/create-customer", auth, createCustomer);
 router.get("/get-customers", auth, getCustomers);
 router.get("/get-customer/:id", auth, getCustomer);
 router.put("/update-customer/:id", auth, updateCustomer);
+
+router.post("/bulk-add", auth, bulkAdd);
+
 export default router;

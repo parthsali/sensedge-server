@@ -116,3 +116,48 @@ export const getCustomer = async (req, res, next) => {
     next(error);
   }
 };
+
+export const bulkAdd = async (req, res, next) => {
+  try {
+    const { customers } = req.body;
+
+    if (!Array.isArray(customers)) {
+      return next(createHttpError(400, "Customers should be an array"));
+    }
+
+    // use insertMany to bulk insert customers
+    const result = customers.map((customer) => {
+      return {
+        insertOne: {
+          document: {
+            _id: `customer-${nanoid()}`,
+            ...customer,
+          },
+        },
+      };
+    });
+
+    await Customer.bulkWrite(result);
+
+    const conversations = result.map((customer) => {
+      const conversation = new Conversation({
+        customer: customer?.insertOne?.document?._id,
+        user: customer?.insertOne?.document?.assigned_user,
+        lastMessage: null,
+      });
+
+      return conversation.save();
+    });
+
+    // create a conversation for each customer
+
+    await Promise.all(conversations);
+
+    res.status(201).json({
+      message: "Customers added successfully",
+      result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
