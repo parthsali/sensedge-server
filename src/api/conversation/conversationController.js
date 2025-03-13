@@ -57,7 +57,7 @@ export const getUserConversations = async (req, res, next) => {
     }
 
     for (const conversation of conversations) {
-      if (["image", "video", "file"].includes(conversation.lastMessage.type)) {
+      if (["image", "video", "file"].includes(conversation.lastMessage?.type)) {
         conversation.lastMessage.url = await getFileSignedUrl(
           conversation.lastMessage.url
         );
