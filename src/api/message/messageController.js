@@ -52,9 +52,7 @@ export const sendMessage = async (req, res, next) => {
         lastMessage: newMessage._id,
       });
 
-      return res
-        .status(201)
-        .json({ message: "Message sent successfully", message: newMessage });
+      return res.status(201).json({ message: newMessage });
     }
 
     const file = req.file;
@@ -83,9 +81,7 @@ export const sendMessage = async (req, res, next) => {
 
     newMessage.url = await getFileSignedUrl(newMessage.url);
 
-    return res
-      .status(201)
-      .json({ message: "Message sent successfully", messageData: newMessage });
+    return res.status(201).json({ message: newMessage });
   } catch (err) {
     next(err);
   }
