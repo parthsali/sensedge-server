@@ -57,9 +57,22 @@ export const getCustomers = async (req, res, next) => {
       "name email"
     );
 
+    // return customer with his conversation id
+    const customersWithConversations = await Promise.all(
+      customers.map(async (customer) => {
+        const conversation = await Conversation.findOne({
+          customer: customer._id,
+        });
+        return {
+          ...customer._doc,
+          conversationId: conversation ? conversation._id : null,
+        };
+      })
+    );
+
     res.status(200).json({
       message: "Customers retrieved successfully",
-      customers,
+      customers: customersWithConversations,
     });
   } catch (error) {
     next(error);
