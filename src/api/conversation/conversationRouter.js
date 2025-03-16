@@ -4,6 +4,7 @@ import {
   getConversationMessages,
   getUserConversations,
   reassignConversation,
+  searchConversation,
 } from "./conversationController.js";
 
 import { auth } from "../../middlewares/authMiddleware.js";
@@ -23,5 +24,7 @@ router.patch(
 // user
 router.get("/get-user-conversations", auth, getUserConversations);
 router.get("/get-conversation-messages/:id", auth, getConversationMessages);
+
+router.get("/search", auth, searchConversation);
 
 export default router;

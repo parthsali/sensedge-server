@@ -281,3 +281,36 @@ export const sendTemplate = async (req, res, next) => {
     next(err);
   }
 };
+
+export const searchMessage = async (req, res, next) => {
+  try {
+    const { query } = req.query;
+
+    if (!query) {
+      throw createHttpError(400, "Query is required");
+    }
+
+    const messages = await Message.find({
+      $or: [
+        { text: { $regex: query, $options: "i" } },
+        { name: { $regex: query, $options: "i" } },
+      ],
+    });
+
+    if (!messages) {
+      throw createHttpError(404, "No messages found");
+    }
+
+    for (let i = 0; i < messages.length; i++) {
+      const message = messages[i];
+
+      if (message.type !== "text") {
+        message.url = await getFileSignedUrl(message.url);
+      }
+    }
+
+    return res.status(200).json({ messages });
+  } catch (err) {
+    next(err);
+  }
+};

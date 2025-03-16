@@ -57,3 +57,24 @@ export const setDefaultUser = async (req, res, next) => {
     next(error);
   }
 };
+
+export const searchUser = async (req, res, next) => {
+  try {
+    const { query } = req.query;
+
+    if (!query) {
+      throw createHttpError(400, "Query is required");
+    }
+
+    const users = await User.find({
+      $or: [
+        { name: { $regex: query, $options: "i" } },
+        { email: { $regex: query, $options: "i" } },
+      ],
+    });
+
+    res.status(200).json({ message: "Users fetched", users });
+  } catch (error) {
+    next(error);
+  }
+};

@@ -135,6 +135,31 @@ export const getCustomer = async (req, res, next) => {
   }
 };
 
+export const searchCustomer = async (req, res, next) => {
+  try {
+    const { query } = req.query;
+
+    if (!query) {
+      return next(createHttpError(400, "Query is required"));
+    }
+
+    const customers = await Customer.find({
+      $or: [
+        { name: { $regex: query, $options: "i" } },
+        { phone: { $regex: query, $options: "i" } },
+        { company: { $regex: query, $options: "i" } },
+      ],
+    });
+
+    res.status(200).json({
+      message: "Customers retrieved successfully",
+      customers,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const bulkAdd = async (req, res, next) => {
   try {
     const { customers } = req.body;

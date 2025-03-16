@@ -149,3 +149,53 @@ export const reassignConversation = async (req, res, next) => {
     next(createHttpError(500, "Internal server error"));
   }
 };
+
+export const searchConversation = async (req, res, next) => {
+  try {
+    const { query } = req.query;
+
+    if (!query) {
+      return next(createHttpError(400, "Query is required"));
+    }
+
+    const conversations = await Conversation.find({}, { createdAt: 0 })
+      .populate("user", "name email")
+      .populate("customer", "name phone company")
+      .populate("lastMessage")
+      .sort({ updatedAt: -1 })
+      .exec();
+
+    const filteredConversations = conversations.filter((conversation) => {
+      return (
+        conversation.customer?.name
+          ?.toLowerCase()
+          .includes(query.toLowerCase()) ||
+        conversation.customer?.phone?.includes(query) ||
+        conversation.customer?.company
+          ?.toLowerCase()
+          .includes(query.toLowerCase()) ||
+        conversation.lastMessage?.text
+          ?.toLowerCase()
+          .includes(query.toLowerCase()) ||
+        conversation.lastMessage?.name
+          ?.toLowerCase()
+          .includes(query.toLowerCase())
+      );
+    });
+
+    filteredConversations.forEach((conversation) => {
+      if (["image", "video", "file"].includes(conversation.lastMessage?.type)) {
+        conversation.lastMessage.url = getFileSignedUrl(
+          conversation.lastMessage.url
+        );
+      }
+    });
+
+    res.status(200).json({
+      message: "Conversations fetched successfully",
+      conversations: filteredConversations,
+    });
+  } catch (error) {
+    next(createHttpError(500, "Internal server error"));
+  }
+};
