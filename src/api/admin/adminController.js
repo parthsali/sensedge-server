@@ -17,7 +17,13 @@ const nanoid = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 12);
 
 export const getUsers = async (req, res, next) => {
   try {
-    const users = await User.find({ role: "user" }, { password: 0 });
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const users = await User.find({ role: "user" }, { password: 0 })
+      .skip(skip)
+      .limit(limit);
 
     const usersData = [];
     for (const user of users) {
