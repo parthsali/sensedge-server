@@ -52,10 +52,15 @@ export const createCustomer = async (req, res, next) => {
 
 export const getCustomers = async (req, res, next) => {
   try {
-    const customers = await Customer.find().populate(
-      "assigned_user",
-      "name email"
-    );
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+
+    const skip = (page - 1) * limit;
+
+    const customers = await Customer.find()
+      .populate("assigned_user", "name email")
+      .skip(skip)
+      .limit(limit);
 
     // return customer with his conversation id
     const customersWithConversations = await Promise.all(
