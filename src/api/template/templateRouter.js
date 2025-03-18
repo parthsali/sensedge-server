@@ -25,7 +25,13 @@ router.post(
   upload.array("files", 10),
   createTemplate
 );
-router.put("/update-template/:id", auth, checkRole("admin"), updateTemplate);
+router.put(
+  "/update-template/:id",
+  auth,
+  checkRole("admin"),
+  upload.array("files", 10),
+  updateTemplate
+);
 
 router.delete("/delete-template/:id", auth, checkRole("admin"), deleteTemplate);
 

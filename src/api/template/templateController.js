@@ -1,6 +1,9 @@
 import createHttpError from "http-errors";
 import Template from "./templateModel.js";
-import { createTemplateSchema } from "./templateValidation.js";
+import {
+  createTemplateSchema,
+  updateTemplateSchema,
+} from "./templateValidation.js";
 import {
   addFile,
   getFileSignedUrl,
@@ -79,17 +82,12 @@ export const createTemplate = async (req, res, next) => {
     for (const file of files) {
       const uploadedFile = await addFile("templates", file);
 
-      const type = file.mimetype.includes("image")
-        ? "image"
-        : file.mimetype.includes("video")
-        ? "video"
-        : "file";
-
       mediaFiles.push({
         name: file.originalname,
-        type: type,
+        type: getFileType(file.mimetype),
         url: uploadedFile,
         size: file.size,
+        mimeType: file.mimetype,
       });
     }
 
@@ -121,50 +119,74 @@ export const updateTemplate = async (req, res, next) => {
     const { id } = req.params;
 
     const template = await Template.findById(id);
-
     if (!template) {
       throw createHttpError(404, "Template not found");
     }
 
-    const { error } = createTemplateSchema.validate(req.body);
-
+    const { error } = updateTemplateSchema.validate(req.body);
     if (error) {
       throw createHttpError(400, error);
     }
 
-    const { name, text } = req.body;
+    let { name, text, deletedFiles } = req.body;
 
-    const files = req.files || [];
+    deletedFiles = deletedFiles || [];
 
-    const mediaFiles = [];
+    console.log("deletedFiles", deletedFiles);
 
-    for (const file of files) {
+    const newFiles = req.files || [];
+    let updatedFiles = template.files || [];
+
+    updatedFiles = updatedFiles.filter(
+      (file) => !deletedFiles.includes(file._id.toString())
+    );
+
+    for (const file of newFiles) {
       const uploadedFile = await addFile("templates", file);
 
-      const fileType = file.mimetype.includes("image")
-        ? "image"
-        : file.mimetype.includes("video")
-        ? "video"
-        : "document";
-
-      mediaFiles.push({
-        fileName: file.originalname,
-        fileUrl: uploadedFile,
-        fileType,
-        fileSize: file.size,
+      updatedFiles.push({
+        name: file.originalname,
+        url: uploadedFile,
+        type: getFileType(file.mimetype),
+        size: file.size,
+        mimeType: file.mimetype,
       });
     }
 
     template.name = name;
     template.text = text;
-    template.mediaFiles = mediaFiles;
+    template.files = updatedFiles;
+
+    const filesToDelete = template.files.filter((file) =>
+      deletedFiles.includes(file._id.toString())
+    );
+
+    console.log("filesToDelete", filesToDelete);
+
+    for (const file of filesToDelete) {
+      await deleteFile(file.url);
+    }
+
+    for (const fileToDelete of filesToDelete) {
+      await deleteFile(fileToDelete.url);
+    }
 
     await template.save();
+
+    for (const file of template.files) {
+      file.url = await getFileSignedUrl(file.url);
+    }
 
     res.status(200).json({ message: "Template updated", template });
   } catch (error) {
     next(error);
   }
+};
+
+const getFileType = (mimeType) => {
+  if (mimeType.includes("image")) return "image";
+  if (mimeType.includes("video")) return "video";
+  return "file";
 };
 
 export const deleteTemplate = async (req, res, next) => {
