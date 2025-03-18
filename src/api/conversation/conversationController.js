@@ -94,23 +94,22 @@ export const getConversationMessages = async (req, res, next) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 50;
     const skip = (page - 1) * limit;
-    console.log("working 0");
+
     const messages = await Message.find(
       { conversation: req.params.id },
       { conversation: 0, updatedAt: 0 }
     )
-      .sort({
-        createdAt: -1,
-      })
+      .sort({ createdAt: -1 })
       .limit(limit)
-      .skip(skip);
+      .skip(skip)
+      .populate({
+        path: "author",
+        select: "name ",
+      });
 
-    console.log("working one");
     for (const message of messages) {
       if (["image", "video", "file"].includes(message.type)) {
-        console.log("message.url before", message.url);
         message.url = await getFileSignedUrl(message.url);
-        console.log("message.url after", message.url);
       }
     }
 

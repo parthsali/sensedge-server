@@ -9,8 +9,20 @@ const messageSchema = new mongoose.Schema(
     },
     author: {
       type: String,
-      ref: "User" || "Customer",
       required: true,
+      validate: {
+        validator: function (v) {
+          return (
+            v.startsWith("user") ||
+            v.startsWith("customer") ||
+            v.startsWith("admin")
+          );
+        },
+        message: (props) => `${props.value} is not a valid author!`,
+      },
+      ref: function () {
+        return this.author.startsWith("customer") ? "Customer" : "User";
+      },
     },
     type: {
       type: String,
