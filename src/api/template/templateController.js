@@ -18,10 +18,10 @@ export const getTemplates = async (req, res, next) => {
     ).populate("createdBy", "name email");
 
     for (const template of templates) {
-      const mediaFiles = template.mediaFiles || [];
+      const files = template.files || [];
 
-      for (const file of mediaFiles) {
-        file.fileUrl = await getFileSignedUrl(file.fileUrl);
+      for (const file of files) {
+        file.url = await getFileSignedUrl(file.url);
       }
     }
 
@@ -43,11 +43,10 @@ export const getTemplate = async (req, res, next) => {
       throw createHttpError(404, "Template not found");
     }
 
-    const mediaFiles = template.mediaFiles || [];
+    const files = template.files || [];
 
-    for (const file of mediaFiles) {
-      console.log(file.fileName);
-      file.fileUrl = await getFileSignedUrl(file.fileUrl);
+    for (const file of files) {
+      file.url = await getFileSignedUrl(file.url);
     }
 
     res.status(200).json({ message: "Template fetched", template });
@@ -177,9 +176,9 @@ export const deleteTemplate = async (req, res, next) => {
     if (!template) {
       throw createHttpError(404, "Template not found");
     }
-
-    for (const file of template.mediaFiles) {
-      await deleteFile(file.fileUrl);
+    const files = template.files || [];
+    for (const file of files) {
+      await deleteFile(file.url);
     }
 
     res.status(200).json({ message: "Template deleted" });
