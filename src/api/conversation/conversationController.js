@@ -1,6 +1,8 @@
 import createHttpError from "http-errors";
 import Conversation from "./conversationModel.js";
 import Message from "../message/messageModel.js";
+import Customer from "../customer/customerModel.js";
+import User from "../user/userModel.js";
 import { getFileSignedUrl } from "../../services/awsService.js";
 
 export const getAllConversations = async (req, res, next) => {
@@ -134,15 +136,37 @@ export const reassignConversation = async (req, res, next) => {
       return next(createHttpError(404, "Conversation not found"));
     }
 
-    const { userId } = req.body;
+    const { userId, customerId } = req.body;
 
     if (!userId) {
       return next(createHttpError(400, "User id is required"));
     }
 
-    conversation.user = userId;
+    if (!customerId) {
+      return next(createHttpError(400, "Customer id is required"));
+    }
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return next(createHttpError(404, "User not found"));
+    }
+
+    const customer = await Customer.findByIdAndUpdate(
+      customerId,
+      { assigned_user: user._id },
+      { new: true }
+    );
+
+    if (!customer) {
+      return next(createHttpError(404, "Customer not found"));
+    }
+
+    conversation.user = user._id;
+    conversation.customer = customer._id;
 
     await conversation.save();
+    await customer.save();
 
     res.status(200).json({ message: "Conversation reassigned successfully" });
   } catch (error) {
