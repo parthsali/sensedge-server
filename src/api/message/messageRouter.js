@@ -24,4 +24,9 @@ router.get("/search", auth, searchMessage);
 
 router.post("/webhook", handleWebhook);
 
+router.get("/webhook", (req, res) => {
+  return res.status(200).json({ message: "Webhook is working" });
+}
+);
+
 export default router;
