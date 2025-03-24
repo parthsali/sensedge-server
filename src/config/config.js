@@ -14,6 +14,9 @@ const _config = {
   BUCKET_REGION: process.env.BUCKET_REGION,
   ACCESS_KEY: process.env.ACCESS_KEY,
   SECRET_ACCESS_KEY: process.env.SECRET_ACCESS_KEY,
+  WABOXAPP_ENDPOINT: process.env.WABOXAPP_ENDPOINT,
+  WABOXAPP_TOKEN : process.env.WABOXAPP_TOKEN,
+  WABOXAPP_UID : process.env.WABOXAPP_UID,
 };
 
 export const config = Object.freeze(_config);

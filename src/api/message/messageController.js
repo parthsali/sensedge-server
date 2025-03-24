@@ -5,6 +5,12 @@ import { addFile } from "../../services/awsService.js";
 import Conversation from "../conversation/conversationModel.js";
 import Template from "../template/templateModel.js";
 import { getFileSignedUrl } from "../../services/awsService.js";
+import Config from "../user/configModel.js";
+import Customer from "../customer/customerModel.js";
+import { customAlphabet } from "nanoid";
+import { sendText } from "../../services/waboxappService.js";
+
+const nanoid = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 12);
 
 export const sendMessage = async (req, res, next) => {
   try {
@@ -47,6 +53,15 @@ export const sendMessage = async (req, res, next) => {
       });
 
       await newMessage.save();
+
+      const customer = await Customer.findById(conversation.customer);
+
+      // call sendText function if fails then delete the message
+      const response = await sendText(customer.phone, newMessage._id, text);
+      if (!response.success) {
+        await Message.findByIdAndDelete(newMessage._id);
+        throw createHttpError(500, "Message not sent");        
+      }
 
       await Conversation.findByIdAndUpdate(conversationId, {
         lastMessage: newMessage._id,
@@ -312,5 +327,152 @@ export const searchMessage = async (req, res, next) => {
     return res.status(200).json({ messages });
   } catch (err) {
     next(err);
+  }
+};
+
+
+
+export const handleWebhook = async (req, res, next) => {
+  try {
+
+    console.log("Received webhook", req.body);
+    const {
+      event,
+    } = req.body;
+
+    if (event === "message") {
+      const {
+        token,
+      "contact[uid]": contactUid,
+      "contact[name]": contactName,
+      "contact[type]": contactType,
+      "message[dtm]": messageDtm,
+      "message[uid]": messageUid,
+      "message[cuid]": messageCuid,
+      "message[dir]": messageDir,
+      "message[type]": messageType,
+      "message[body][text]": messageText,
+      "message[body][url]": messageUrl,
+      "message[body][size]": messageSize,
+      "message[body][mimetype]": messageMimeType,
+      ack,
+    } = req.body;
+
+      
+      // Map ACK status to message status
+      let status;
+      switch (Number(ack)) {
+        case 0:
+        case 1:
+          status = "sent";
+          break;
+        case 2:
+          status = "delivered";
+          break;
+        case 3:
+          status = "read";
+          break;
+        default:
+          status = "failed";
+      }
+
+      // Map message type; if it's 'chat', treat it as text
+      const msgType = messageType === "chat" ? "text" : messageType;
+
+      // Supported message types: text, image, video, file
+      if (!["text", "image", "video", "file"].includes(msgType)) {
+        throw createHttpError(400, "Invalid message type");
+      }
+
+      // Remove the first two digits from contactUid (as required)
+      const modifiedContactUid = contactUid.slice(2);
+
+      let customer = await Customer.findOne({ phone: modifiedContactUid });
+      let conversation = await Conversation.findOne({ customer: customer?._id });
+
+    
+      if (!customer) {
+        // Create a new customer
+        const customer = new Customer({
+          _id: `customer-${nanoid()}`,
+          name: contactName,
+          phone: modifiedContactUid,
+          company: "Not Available",
+          assigned_user: Config.defaultUser,
+        });
+        await customer.save();
+
+        // Create a new conversation with the new customer
+        conversation = new Conversation({
+          user: Config.defaultUser,
+          customer: customer._id,
+          unreadCount: 0,
+          lastMessage: null,
+        });
+        await conversation.save();
+      }
+
+      // Create a new message using the incoming data
+      const newMessage = new Message({
+        conversation: conversation._id,
+        author: conversation.customer, // Author is set as the customer
+        type: msgType,
+        text: msgType === "text" ? messageText : null,
+        // For non-text messages, extract file name from URL if available
+        name: msgType !== "text" && messageUrl ? messageUrl.split("/").pop() : undefined,
+        size: msgType !== "text" ? messageSize : undefined,
+        url: msgType !== "text" ? messageUrl : undefined,
+        mimeType: msgType !== "text" ? messageMimeType : undefined,
+        status,
+      });
+
+      await newMessage.save();
+
+      // Update conversation's lastMessage field
+      conversation.lastMessage = newMessage._id;
+      await conversation.save();
+
+      return res.status(200).json({ success: true, message: "Webhook received" });
+    } 
+    
+    else if (event === "ack") {
+      // Extract fields for the ACK event
+      const { cuid, ack: ackValue } = req.body;
+
+      // Find the message by custom unique ID (cuid)
+      const message = await Message.findOne({ _id : cuid });
+      if (!message) {
+        throw createHttpError(404, "Message not found");
+      }
+
+      // Map ACK value to status
+      let status;
+      switch (Number(ackValue)) {
+        case 0:
+        case 1:
+          status = "sent";
+          break;
+        case 2:
+          status = "delivered";
+          break;
+        case 3:
+          status = "read";
+          break;
+        default:
+          status = "failed";
+      }
+
+      // Update the message status
+      message.status = status;
+      await message.save();
+
+      return res
+        .status(200)
+        .json({ success: true, message: "ACK received and status updated" });
+    } else {
+      throw createHttpError(400, "Invalid event type");
+    } 
+  } catch (error) {
+    next(error);
   }
 };

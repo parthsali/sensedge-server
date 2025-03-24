@@ -5,6 +5,7 @@ import {
   sendTemplate,
   updateMessageStatus,
   searchMessage,
+  handleWebhook,
 } from "./messageController.js";
 import { auth } from "../../middlewares/authMiddleware.js";
 import { upload } from "../../middlewares/multerMiddleware.js";
@@ -20,5 +21,7 @@ router.post("/receive-message", auth, upload.single("file"), receiveMessage);
 router.post("/send-template", auth, sendTemplate);
 
 router.get("/search", auth, searchMessage);
+
+router.post("/webhook", handleWebhook);
 
 export default router;
