@@ -9,6 +9,9 @@ import Config from "../user/configModel.js";
 import Customer from "../customer/customerModel.js";
 import { customAlphabet } from "nanoid";
 import { sendText } from "../../services/waboxappService.js";
+import fs from "fs";
+import path from "path";
+import axios from "axios";
 
 const nanoid = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 12);
 
@@ -443,6 +446,40 @@ export const handleWebhook = async (req, res, next) => {
           status,
         });
       } else {
+        // Download the file from the URL
+        const response = await axios({
+          url: messageUrl,
+          method: 'GET',
+          responseType: 'stream',
+        });
+
+        console.log("Webhook : File downloaded", response);
+
+        const filePath = path.join(__dirname, 'temp', `${messageType}-${messageUid}`);
+
+        console.log("Webhook : File path", filePath);
+        const writer = fs.createWriteStream(filePath);
+
+
+        response.data.pipe(writer);
+
+        await new Promise((resolve, reject) => {
+          writer.on('finish', resolve);
+          writer.on('error', reject);
+        });
+
+  
+        const uploadedFileUrl = await addFile('messages', {
+          path: filePath,
+          filename: `${messageType}-${messageUid}`,
+          mimetype: messageMimeType,
+        });
+
+        // Clean up the temporary file
+        fs.unlinkSync(filePath);
+
+        // Update the message URL to the S3 URL
+        messageUrl = uploadedFileUrl;
         newMessage = new Message({
           conversation: conversation._id,
           type : msgType,
