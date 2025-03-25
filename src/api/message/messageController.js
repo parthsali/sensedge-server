@@ -435,6 +435,8 @@ export const handleWebhook = async (req, res, next) => {
       conversation.lastMessage = newMessage._id;
       await conversation.save();
 
+      console.log("Message saved", newMessage);
+
       return res.status(200).json({ success: true, message: "Webhook received" });
     } 
     
@@ -468,6 +470,8 @@ export const handleWebhook = async (req, res, next) => {
       // Update the message status
       message.status = status;
       await message.save();
+
+      console.log("Message status updated", message);
 
       return res
         .status(200)
