@@ -424,18 +424,27 @@ export const handleWebhook = async (req, res, next) => {
       }
 
       // Create a new message using the incoming data
-      const newMessage = new Message({
-        conversation: conversation._id,
-        author: customer._id,
-        type: msgType,
-        text: msgType === "text" ? messageText : null,
-        // For non-text messages, extract file name from URL if available
-        name: msgType !== "text" ? messageCaption : null,
-        size: msgType !== "text" ? messageSize : null,
-        url: msgType !== "text" ? messageUrl : null,
-        mimeType: msgType !== "text" ? messageMimeType : null,
-        status
-      });
+      let newMessage;
+      if(msgType === "text") {
+        newMessage = new Message({
+          conversation: conversation._id,
+          type : msgType,
+          text : messageText,
+          author : customer._id,
+          status,
+        });
+      } else {
+        newMessage = new Message({
+          conversation: conversation._id,
+          type : msgType,
+          name : messageType + "-" + messageUid,
+          size : messageSize,
+          url : messageUrl,
+          mimeType : messageMimeType,
+          author : customer._id,
+          status,
+        });
+      }
 
       await newMessage.save();
 
