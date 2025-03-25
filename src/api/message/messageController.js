@@ -425,7 +425,7 @@ export const handleWebhook = async (req, res, next) => {
         type: msgType,
         text: msgType === "text" ? messageText : null,
         // For non-text messages, extract file name from URL if available
-        name: msgType !== "text" ? null : messageUrl.split("/").pop(),
+        name: msgType !== "text" ? null : messageCaption,
         size: msgType !== "text" ? messageSize : null,
         url: msgType !== "text" ? messageUrl : null,
         mimeType: msgType !== "text" ? messageMimeType : null,
