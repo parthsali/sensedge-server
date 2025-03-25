@@ -18,8 +18,11 @@ const s3 = new S3Client({
 });
 
 export const addFile = async (folder = "general", file) => {
+  console.log("File" , file);
   const filePath = file.path; // Get file path from multer
   const fileName = file.filename; // Get the stored file name
+
+
 
   try {
     const fileStream = fs.createReadStream(filePath);

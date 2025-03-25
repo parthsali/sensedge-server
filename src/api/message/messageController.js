@@ -447,54 +447,51 @@ export const handleWebhook = async (req, res, next) => {
         });
       } else {
         // Download the file from the URL
-        const url = messageUrl;
-        const __dirname = path.resolve();
-        const fileName = url.split('/').pop();
-        const filePath = path.join(__dirname, 'public/temp/', fileName);
 
-        console.log("fileName", fileName);
-        console.log("filePath", filePath);
+          const url = messageUrl;
+          const __dirname = path.resolve();
+          const fileName = `${messageType}-${messageUid}`;
+          const filePath = path.join(__dirname, "public/temp", fileName);
+  
+          console.log("FileName:", fileName);
+          console.log("FilePath:", filePath);
+          console.log("Fetching file...");
+  
+          const response = await fetch(url);
+  
+          if (!response.ok) {
+            console.error("Error fetching file:", response.status, response.statusText);
+            return res.status(response.status).json({ error: "File not found" });
+          }
+  
+          const buffer = await response.buffer();
+          await fs.promises.writeFile(filePath, buffer);
+          console.log("File saved:", filePath);
+  
+          // Upload the file to AWS
+          const file = {
+            filename : fileName,
+            path : filePath,
+            mimetype : messageMimeType,
+            size : messageSize
+          }
+          let uploadedFile;
+          try {
+            uploadedFile = await addFile("messages", file);
+            console.log("File uploaded:", uploadedFile);
+          } catch (uploadError) {
+            console.error("Error uploading file:", uploadError);
+            return res.status(500).json({ error: "Error uploading file" });
+          }
 
-        console.log("Fetching file...");
-
-        fetch(url)
-          .then(res => {
-            if (!res.ok) {
-              throw new Error(`HTTP error! Status: ${res.status}`);
-            }
-            return res.buffer();
-          })
-          .then(buffer => {
-            fs.writeFile(filePath, buffer, err => {
-              if (err) {
-                console.error("Error saving file:", err);
-                return res.status(500).send("Error saving file");
-              }
-              res.setHeader('Content-Type', 'image/jpeg');
-              res.sendFile(filePath);
-            });
-          })
-          .catch(err => {
-            console.error("Error fetching file:", err);
-            res.status(500).send("Error fetching file");
-          });
-
-
-          // upload the file to AWS
-          const uploadedFile = await addFile("messages", filePath);
-
-          console.log("File uploaded", uploadedFile);
-
-          // Create a new message using the incoming data
-          messageUrl = uploadedFile;
-        
+        // Create a new message
         newMessage = new Message({
           conversation: conversation._id,
-          type : msgType,
-          name : messageType + "-" + messageUid,
-          size : messageSize,
-          url : messageUrl,
-          mimeType : messageMimeType,
+          type: msgType,
+          name: fileName,
+          size: messageSize,
+          url: uploadedFile,
+          mimeType: messageMimeType,
           author : customer._id,
           status,
         });
