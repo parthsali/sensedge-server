@@ -9,9 +9,9 @@ import Config from "../user/configModel.js";
 import Customer from "../customer/customerModel.js";
 import { customAlphabet } from "nanoid";
 import { sendText } from "../../services/waboxappService.js";
-import fs from "fs";
-import path from "path";
-import axios from "axios";
+import fetch from "node-fetch";
+import fs from 'fs';
+import path from 'path';
 
 const nanoid = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 12);
 
@@ -447,45 +447,47 @@ export const handleWebhook = async (req, res, next) => {
         });
       } else {
         // Download the file from the URL
+        const url = messageUrl;
+        const __dirname = path.resolve();
+        const fileName = url.split('/').pop();
+        const filePath = path.join(__dirname, 'public/temp/', fileName);
 
-        console.log("Webhook : Downloading file", messageUrl);
-        console.log("Webhook : Message type", messageType);
-        console.log("Webhook : Message UID", messageUid);
-        console.log("Webhook : Message size", messageSize);
-        console.log("Webhook : Message MIME type", messageMimeType);
-        const response = await axios({
-          url: messageUrl,
-          method: 'GET',
-          responseType: 'stream',
-        });
+        console.log("fileName", fileName);
+        console.log("filePath", filePath);
 
-        console.log("Webhook : File downloaded", response);
+        console.log("Fetching file...");
 
-        const filePath = path.join(__dirname, 'temp', `${messageType}-${messageUid}`);
+        fetch(url)
+          .then(res => {
+            if (!res.ok) {
+              throw new Error(`HTTP error! Status: ${res.status}`);
+            }
+            return res.buffer();
+          })
+          .then(buffer => {
+            fs.writeFile(filePath, buffer, err => {
+              if (err) {
+                console.error("Error saving file:", err);
+                return res.status(500).send("Error saving file");
+              }
+              res.setHeader('Content-Type', 'image/jpeg');
+              res.sendFile(filePath);
+            });
+          })
+          .catch(err => {
+            console.error("Error fetching file:", err);
+            res.status(500).send("Error fetching file");
+          });
 
-        console.log("Webhook : File path", filePath);
-        const writer = fs.createWriteStream(filePath);
 
+          // upload the file to AWS
+          const uploadedFile = await addFile("messages", filePath);
 
-        response.data.pipe(writer);
+          console.log("File uploaded", uploadedFile);
 
-        await new Promise((resolve, reject) => {
-          writer.on('finish', resolve);
-          writer.on('error', reject);
-        });
-
-  
-        const uploadedFileUrl = await addFile('messages', {
-          path: filePath,
-          filename: `${messageType}-${messageUid}`,
-          mimetype: messageMimeType,
-        });
-
-        // Clean up the temporary file
-        fs.unlinkSync(filePath);
-
-        // Update the message URL to the S3 URL
-        messageUrl = uploadedFileUrl;
+          // Create a new message using the incoming data
+          messageUrl = uploadedFile;
+        
         newMessage = new Message({
           conversation: conversation._id,
           type : msgType,
