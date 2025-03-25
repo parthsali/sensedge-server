@@ -407,10 +407,9 @@ export const handleWebhook = async (req, res, next) => {
         throw createHttpError(404, "Default user not found");
       }
 
-    
       if (!customer) {
         // Create a new customer
-        const customer = new Customer({
+        customer = new Customer({
           _id: `customer-${nanoid()}`,
           name: contactName,
           phone: contactUid,
@@ -472,6 +471,7 @@ export const handleWebhook = async (req, res, next) => {
     } 
     
     else if (event === "ack") {
+      console.log("Received ACK event", req.body);
       // Extract fields for the ACK event
       const { cuid, ack: ackValue } = req.body;
 
