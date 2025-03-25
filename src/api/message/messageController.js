@@ -85,6 +85,7 @@ export const sendMessage = async (req, res, next) => {
       name: file.originalname,
       size: file.size,
       url: uploadedFile,
+      isAWSUrl: true,
       mimeType: file.mimetype,
     });
 
