@@ -56,12 +56,16 @@ export const sendMessage = async (req, res, next) => {
 
       const customer = await Customer.findById(conversation.customer);
 
+      console.log("Sending message to", customer.phone, text);
+
       // call sendText function if fails then delete the message
       const response = await sendText(customer.phone, newMessage._id, text);
       if (!response.success) {
         await Message.findByIdAndDelete(newMessage._id);
         throw createHttpError(500, "Message not sent");        
       }
+
+      console.log("Message sent", response);
 
       await Conversation.findByIdAndUpdate(conversationId, {
         lastMessage: newMessage._id,

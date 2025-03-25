@@ -8,6 +8,8 @@ export const sendText = async (phone, message_id, text) => {
 
         const url = `${config.WABOXAPP_ENDPOINT}/send/chat`;
 
+        console.log(url);
+
         const response = await axios.post(url, null, {
             params: {
                 uid: uid,
@@ -17,6 +19,8 @@ export const sendText = async (phone, message_id, text) => {
                 text: text
             }
         });
+
+        console.log(response.data);
 
         const data = response.data;
 

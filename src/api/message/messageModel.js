@@ -41,10 +41,7 @@ const messageSchema = new mongoose.Schema(
     url: {
       type: String,
     },
-    isAWSUrl: {
-      type: Boolean,
-      default: false,
-    },
+    
     mimeType: {
       type: String,
     },

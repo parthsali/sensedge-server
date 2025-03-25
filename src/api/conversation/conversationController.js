@@ -97,7 +97,7 @@ export const getConversationMessages = async (req, res, next) => {
 
     const messages = await Message.find(
       { conversation: req.params.id },
-      { conversation: 0, updatedAt: 0 }
+      { conversation: 0, updatedAt: 0 , isAWSUrl: 0}
     )
       .sort({ createdAt: -1 })
       .limit(limit)
