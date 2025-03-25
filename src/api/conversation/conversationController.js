@@ -108,7 +108,7 @@ export const getConversationMessages = async (req, res, next) => {
       });
 
     for (const message of messages) {
-      if (["image", "video", "file"].includes(message.type) && message.isAWSUrl == true) {
+      if (["image", "video", "file"].includes(message.type)) {
         message.url = await getFileSignedUrl(message.url);
       }
     }
