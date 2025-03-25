@@ -429,6 +429,10 @@ export const handleWebhook = async (req, res, next) => {
         await conversation.save();
       }
 
+      console.log("Webhook : Customer created", customer);
+
+      console.log("Webhook : Conversation created", conversation);
+
       // Create a new message using the incoming data
       let newMessage;
       if(msgType === "text") {
@@ -454,9 +458,13 @@ export const handleWebhook = async (req, res, next) => {
 
       await newMessage.save();
 
+      console.log("Webhook : New Message saved", newMessage);
+
       // Update conversation's lastMessage field
       conversation.lastMessage = newMessage._id;
       await conversation.save();
+
+      console.log("Webhook : Conversation updated", conversation);
 
       console.log("Message saved", newMessage);
 
