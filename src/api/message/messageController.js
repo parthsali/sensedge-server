@@ -343,23 +343,26 @@ export const handleWebhook = async (req, res, next) => {
     if (event === "message") {
       const {
         token,
-      "contact[uid]": contactUid,
-      "contact[name]": contactName,
-      "contact[type]": contactType,
-      "message[dtm]": messageDtm,
-      "message[uid]": messageUid,
-      "message[cuid]": messageCuid,
-      "message[dir]": messageDir,
-      "message[type]": messageType,
-      "message[body][text]": messageText,
-      "message[body][url]": messageUrl,
-      "message[body][size]": messageSize,
-      "message[body][mimetype]": messageMimeType,
-      ack,
+      uid,
+      contact,
+      message,
     } = req.body;
+
+    const {uid : contactUid, name: contactName, type: contactType} = contact;
+    const {dtm: messageDtm, uid: messageUid, cuid: messageCuid, dir: messageDir, type: messageType, body,  ack} = message;
+    const {text: messageText, caption : messageCaption, url: messageUrl, mimetype: messageMimeType, size : messageSize} = body;
+
+    // console all the fields
+   
+   
+    console.log("ACK", ack);
+    
+
+    // return res.status(200).json({ success: true, message: "Webhook received" });
 
       
       // Map ACK status to message status
+
       let status;
       switch (Number(ack)) {
         case 0:
@@ -384,10 +387,10 @@ export const handleWebhook = async (req, res, next) => {
         throw createHttpError(400, "Invalid message type");
       }
 
-      // Remove the first two digits from contactUid (as required)
-      const modifiedContactUid = contactUid.slice(2);
 
-      let customer = await Customer.findOne({ phone: modifiedContactUid });
+
+      let customer = await Customer.findOne({ phone: contactUid });
+      
       let conversation = await Conversation.findOne({ customer: customer?._id });
 
     
@@ -396,7 +399,7 @@ export const handleWebhook = async (req, res, next) => {
         const customer = new Customer({
           _id: `customer-${nanoid()}`,
           name: contactName,
-          phone: modifiedContactUid,
+          phone: contactUid,
           company: "Not Available",
           assigned_user: Config.defaultUser,
         });
@@ -415,15 +418,15 @@ export const handleWebhook = async (req, res, next) => {
       // Create a new message using the incoming data
       const newMessage = new Message({
         conversation: conversation._id,
-        author: conversation.customer, // Author is set as the customer
+        author: customer._id,
         type: msgType,
         text: msgType === "text" ? messageText : null,
         // For non-text messages, extract file name from URL if available
-        name: msgType !== "text" && messageUrl ? messageUrl.split("/").pop() : undefined,
-        size: msgType !== "text" ? messageSize : undefined,
-        url: msgType !== "text" ? messageUrl : undefined,
-        mimeType: msgType !== "text" ? messageMimeType : undefined,
-        status,
+        name: msgType !== "text" ? null : messageUrl.split("/").pop(),
+        size: msgType !== "text" ? messageSize : null,
+        url: msgType !== "text" ? messageUrl : null,
+        mimeType: msgType !== "text" ? messageMimeType : null,
+        status
       });
 
       await newMessage.save();
@@ -468,7 +471,7 @@ export const handleWebhook = async (req, res, next) => {
 
       return res
         .status(200)
-        .json({ success: true, message: "ACK received and status updated" });
+        .json({ success: true, message: "ACK received and status updated" }); 
     } else {
       throw createHttpError(400, "Invalid event type");
     } 
