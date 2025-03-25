@@ -354,8 +354,9 @@ export const handleWebhook = async (req, res, next) => {
 
     // console all the fields
    
-   
-    console.log("ACK", ack);
+    if(messageDir !== "i") {
+      return res.status(200).json({ success: true, message : "Outgoing message from the user"});
+    }
     
 
     // return res.status(200).json({ success: true, message: "Webhook received" });
@@ -386,6 +387,8 @@ export const handleWebhook = async (req, res, next) => {
       if (!["text", "image", "video", "file"].includes(msgType)) {
         throw createHttpError(400, "Invalid message type");
       }
+
+
 
 
 
@@ -480,6 +483,7 @@ export const handleWebhook = async (req, res, next) => {
       throw createHttpError(400, "Invalid event type");
     } 
   } catch (error) {
+    console.log("Error in webhook", error);
     next(error);
   }
 };
