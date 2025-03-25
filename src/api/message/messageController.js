@@ -447,6 +447,12 @@ export const handleWebhook = async (req, res, next) => {
         });
       } else {
         // Download the file from the URL
+
+        console.log("Webhook : Downloading file", messageUrl);
+        console.log("Webhook : Message type", messageType);
+        console.log("Webhook : Message UID", messageUid);
+        console.log("Webhook : Message size", messageSize);
+        console.log("Webhook : Message MIME type", messageMimeType);
         const response = await axios({
           url: messageUrl,
           method: 'GET',
