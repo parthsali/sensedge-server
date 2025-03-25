@@ -401,6 +401,12 @@ export const handleWebhook = async (req, res, next) => {
       
       let conversation = await Conversation.findOne({ customer: customer?._id });
 
+      let config = await Config.findOne({});
+
+      if (!config) {
+        throw createHttpError(404, "Default user not found");
+      }
+
     
       if (!customer) {
         // Create a new customer
@@ -409,13 +415,13 @@ export const handleWebhook = async (req, res, next) => {
           name: contactName,
           phone: contactUid,
           company: "Not Available",
-          assigned_user: Config.defaultUser,
+          assigned_user: config.defaultUser,
         });
         await customer.save();
 
         // Create a new conversation with the new customer
         conversation = new Conversation({
-          user: Config.defaultUser,
+          user: config.defaultUser,
           customer: customer._id,
           unreadCount: 0,
           lastMessage: null,
