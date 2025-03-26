@@ -71,6 +71,14 @@ export const sendMessage = async (req, res, next) => {
       });
 
       console.log("Message saved in send message", newMessage);
+
+      await newMessage.save();
+
+      await Conversation.findByIdAndUpdate(conversationId, {
+        lastMessage: newMessage._id,
+      });
+      
+
       return res.status(201).json({ message : newMessage });
     }
 
