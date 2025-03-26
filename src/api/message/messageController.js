@@ -65,6 +65,7 @@ export const sendMessage = async (req, res, next) => {
         author,
         type: "text",
         text,
+        status : "sent"
       });
 
       return res.status(201).json({ message : newMessage });
@@ -499,7 +500,7 @@ export const handleWebhook = async (req, res, next) => {
 
         console.log("Webhook : Outgoing message");
 
-        const messageExists = await Message.findOne({ _id : messageCuid });
+        const messageExists = messageCuid.startsWith("message-");
 
           if (messageExists) {
             console.log("Webhook : Message already exists");
