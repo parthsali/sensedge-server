@@ -453,65 +453,72 @@ export const handleWebhook = async (req, res, next) => {
             status,
           });
         } else {
-            console.log("Webhook : Incoming media message");
-            const url = messageUrl;
-            const __dirname = path.resolve();
-            const fileName =  `${messageType}-${url.split("/").pop()}`;
-            const filePath = path.join(__dirname, "public/temp", fileName);
-    
-            console.log("FileName:", fileName);
-            console.log("FilePath:", filePath);
-            console.log("Message URL", url);
-            console.log("Fetching file...");
-    
-            try {
-              const response = await fetch(url);
-  
-              console.log("Response:", response);
-    
-              if (!response.ok) {
-                console.error("Error fetching file:", response.status, response.statusText);
-                return res.status(response.status).json({ error: response.statusText });
-              }
-    
-              const buffer = await response.buffer();
-              await fs.promises.writeFile(filePath, buffer);
-              console.log("File saved:", filePath);
-    
-              // Upload the file to AWS
-              const file = {
-                filename: fileName,
-                path: filePath,
-                mimetype: messageMimeType,
-                size: messageSize
-              };
-              let uploadedFile;
-              try {
-                uploadedFile = await addFile("messages", file);
-                console.log("File uploaded:", uploadedFile);
-              } catch (uploadError) {
-                console.error("Error uploading file:", uploadError);
-                return res.status(500).json({ error: "Error uploading file" });
-              }
-            } catch (fetchError) {
-              console.error("Error fetching file:", fetchError);
-              return res.status(500).json({ error: "Error fetching file" });
+          console.log("Webhook : Incoming media message");
+          const url = messageUrl;
+          const __dirname = path.resolve();
+          const fileName = `${messageType}-${url.split("/").pop()}`;
+          const filePath = path.join(__dirname, "public/temp", fileName);
+          
+          console.log("FileName:", fileName);
+          console.log("FilePath:", filePath);
+          console.log("Message URL:", url);
+          console.log("Fetching file...");
+          
+          // Add headers to mimic a browser request
+          let uploadedFile;
+          try {
+            const response = await fetch(url, {
+              headers: {
+                "User-Agent":
+                  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36",
+              },
+            });
+          
+            console.log("Response status:", response.status);
+          
+            if (!response.ok) {
+              console.error("Error fetching file:", response.status, response.statusText);
+              return res.status(response.status).json({ error: response.statusText });
             }
-  
+          
+            const buffer = await response.buffer();
+            await fs.promises.writeFile(filePath, buffer);
+            console.log("File saved:", filePath);
+          
+            // Prepare file object for addFile (which now expects an object with filename, path, mimetype, and size)
+            const file = {
+              filename: fileName,
+              path: filePath,
+              mimetype: messageMimeType,
+              size: messageSize,
+            };
+          
+            try {
+              uploadedFile = await addFile("messages", file);
+              console.log("File uploaded:", uploadedFile);
+            } catch (uploadError) {
+              console.error("Error uploading file:", uploadError);
+              return res.status(500).json({ error: "Error uploading file" });
+            }
+          } catch (fetchError) {
+            console.error("Error fetching file:", fetchError);
+            return res.status(500).json({ error: "Error fetching file" });
+          }
+          
           // Create a new message
           newMessage = new Message({
-            _id : `message-`+nanoid(),
+            _id: `message-${nanoid()}`,
             conversation: conversation._id,
             type: msgType,
             name: fileName,
             size: messageSize,
             url: uploadedFile,
             mimeType: messageMimeType,
-            author : customer._id,
+            author: customer._id,
             status,
           });
-        }
       }
+    }
       else {
 
 
