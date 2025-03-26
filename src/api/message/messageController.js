@@ -456,7 +456,7 @@ export const handleWebhook = async (req, res, next) => {
             console.log("Webhook : Incoming media message");
             const url = messageUrl;
             const __dirname = path.resolve();
-            const fileName = `${messageType}-${nanoid()}`;
+            const fileName =  `${messageType}-${url.split("/").pop()}`;
             const filePath = path.join(__dirname, "public/temp", fileName);
     
             console.log("FileName:", fileName);
