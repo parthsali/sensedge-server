@@ -59,6 +59,8 @@ export const sendMessage = async (req, res, next) => {
         throw createHttpError(500, "Message not sent");        
       }
 
+      console.log("Message sent successfully", response);
+
       const newMessage = new Message({
         _id: message_id,
         conversation: conversationId,
@@ -68,6 +70,7 @@ export const sendMessage = async (req, res, next) => {
         status : "sent"
       });
 
+      console.log("Message saved in send message", newMessage);
       return res.status(201).json({ message : newMessage });
     }
 
