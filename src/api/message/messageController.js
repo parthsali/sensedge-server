@@ -464,33 +464,38 @@ export const handleWebhook = async (req, res, next) => {
             console.log("Message URL", url);
             console.log("Fetching file...");
     
-            const response = await fetch(url);
-  
-            console.log("Response:", response);
-    
-            if (!response.ok) {
-              console.error("Error fetching file:", response.status, response.statusText);
-              return res.status(response.status).json({ error: "File not found" });
-            }
-    
-            const buffer = await response.buffer();
-            await fs.promises.writeFile(filePath, buffer);
-            console.log("File saved:", filePath);
-    
-            // Upload the file to AWS
-            const file = {
-              filename : fileName,
-              path : filePath,
-              mimetype : messageMimeType,
-              size : messageSize
-            }
-            let uploadedFile;
             try {
-              uploadedFile = await addFile("messages", file);
-              console.log("File uploaded:", uploadedFile);
-            } catch (uploadError) {
-              console.error("Error uploading file:", uploadError);
-              return res.status(500).json({ error: "Error uploading file" });
+              const response = await fetch(url);
+  
+              console.log("Response:", response);
+    
+              if (!response.ok) {
+                console.error("Error fetching file:", response.status, response.statusText);
+                return res.status(response.status).json({ error: response.statusText });
+              }
+    
+              const buffer = await response.buffer();
+              await fs.promises.writeFile(filePath, buffer);
+              console.log("File saved:", filePath);
+    
+              // Upload the file to AWS
+              const file = {
+                filename: fileName,
+                path: filePath,
+                mimetype: messageMimeType,
+                size: messageSize
+              };
+              let uploadedFile;
+              try {
+                uploadedFile = await addFile("messages", file);
+                console.log("File uploaded:", uploadedFile);
+              } catch (uploadError) {
+                console.error("Error uploading file:", uploadError);
+                return res.status(500).json({ error: "Error uploading file" });
+              }
+            } catch (fetchError) {
+              console.error("Error fetching file:", fetchError);
+              return res.status(500).json({ error: "Error fetching file" });
             }
   
           // Create a new message
