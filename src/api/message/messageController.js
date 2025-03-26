@@ -77,7 +77,7 @@ export const sendMessage = async (req, res, next) => {
       await Conversation.findByIdAndUpdate(conversationId, {
         lastMessage: newMessage._id,
       });
-      
+
 
       return res.status(201).json({ message : newMessage });
     }
@@ -456,11 +456,12 @@ export const handleWebhook = async (req, res, next) => {
             console.log("Webhook : Incoming media message");
             const url = messageUrl;
             const __dirname = path.resolve();
-            const fileName = `${messageType}-${messageUid}`;
+            const fileName = `${messageType}-${nanoid()}`;
             const filePath = path.join(__dirname, "public/temp", fileName);
     
             console.log("FileName:", fileName);
             console.log("FilePath:", filePath);
+            console.log("Message URL", url);
             console.log("Fetching file...");
     
             const response = await fetch(url);
