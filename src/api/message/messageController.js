@@ -59,7 +59,15 @@ export const sendMessage = async (req, res, next) => {
         throw createHttpError(500, "Message not sent");        
       }
 
-      return res.status(201).json({ message : "Message sent successfully" });
+      const newMessage = new Message({
+        _id: message_id,
+        conversation: conversationId,
+        author,
+        type: "text",
+        text,
+      });
+
+      return res.status(201).json({ message : newMessage });
     }
 
     const file = req.file;
@@ -487,9 +495,19 @@ export const handleWebhook = async (req, res, next) => {
         }
       }
       else {
+
+
         console.log("Webhook : Outgoing message");
+
+        const messageExists = await Message.findOne({ _id : messageCuid });
+
+          if (messageExists) {
+            console.log("Webhook : Message already exists");
+            return res.status(200).json({ success: true, message: "Webhook received" });
+          }
         if(msgType === "text") {
           console.log("Webhook : Outgoing text message");
+
           newMessage = new Message({
             _id : `message-`+nanoid(),
             conversation: conversation._id,
@@ -500,6 +518,8 @@ export const handleWebhook = async (req, res, next) => {
           });
         } else {
             console.log("Webhook : Outgoing media message");
+
+
             const url = messageUrl;
             const __dirname = path.resolve();
             const fileName = `${messageType}-${messageUid}`;

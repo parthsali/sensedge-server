@@ -20,7 +20,7 @@ export const sendText = async (phone, message_id, text) => {
             }
         });
 
-        console.log(response.data);
+        console.log("Response Data", response.data);
 
         const data = response.data;
 
