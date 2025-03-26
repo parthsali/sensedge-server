@@ -78,3 +78,37 @@ export const searchUser = async (req, res, next) => {
     next(error);
   }
 };
+
+export const setAdmin = async (req, res, next) => {
+  try {
+    const { userId } = req.body;
+
+    if (!userId) {
+      throw createHttpError(400, "User ID is required");
+    }
+
+    const admin = await User.findById(userId, {
+      password: 0,
+      createdAt: 0,
+      updatedAt: 0,
+    });
+
+    if (!admin) {
+      throw createHttpError(404, "Admin not found");
+    }
+
+    const config = await Config.findOne();
+
+    if (!config) {
+      throw createHttpError(404, "Config not found");
+    }
+
+    config.admin = userId;
+    await config.save();
+
+    res.status(200).json({ message: "Admin set", admin });
+ 
+  } catch (error) {
+    next(error);
+  }
+}

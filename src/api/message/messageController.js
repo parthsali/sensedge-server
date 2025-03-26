@@ -48,33 +48,18 @@ export const sendMessage = async (req, res, next) => {
     if (type === "text") {
       const { text } = req.body;
 
-      const newMessage = new Message({
-        conversation: conversationId,
-        author,
-        type: "text",
-        text,
-      });
-
-      await newMessage.save();
+      const message_id = 'message-' + nanoid();
 
       const customer = await Customer.findById(conversation.customer);
 
-      console.log("Sending message to", customer.phone, text);
+      const response = await sendText(customer.phone, message_id, text);
 
-      // call sendText function if fails then delete the message
-      const response = await sendText(customer.phone, newMessage._id, text);
       if (!response.success) {
         await Message.findByIdAndDelete(newMessage._id);
         throw createHttpError(500, "Message not sent");        
       }
 
-      console.log("Message sent", response);
-
-      await Conversation.findByIdAndUpdate(conversationId, {
-        lastMessage: newMessage._id,
-      });
-
-      return res.status(201).json({ message: newMessage });
+      return res.status(201).json({ message : "Message sent successfully" });
     }
 
     const file = req.file;
@@ -362,9 +347,7 @@ export const handleWebhook = async (req, res, next) => {
 
     // console all the fields
    
-    if(messageDir !== "i") {
-      return res.status(200).json({ success: true, message : "Outgoing message from the user"});
-    }
+    
     
 
     // return res.status(200).json({ success: true, message: "Webhook received" });
@@ -437,64 +420,133 @@ export const handleWebhook = async (req, res, next) => {
 
       // Create a new message using the incoming data
       let newMessage;
-      if(msgType === "text") {
-        newMessage = new Message({
-          conversation: conversation._id,
-          type : msgType,
-          text : messageText,
-          author : customer._id,
-          status,
-        });
-      } else {
-        // Download the file from the URL
-
-          const url = messageUrl;
-          const __dirname = path.resolve();
-          const fileName = `${messageType}-${messageUid}`;
-          const filePath = path.join(__dirname, "public/temp", fileName);
+      if(messageDir === 'i') {
+        console.log("Webhook : Incoming message");
+        if(msgType === "text") {
+          console.log("Webhook : Incoming text message");
+          newMessage = new Message({
+            conversation: conversation._id,
+            type : msgType,
+            text : messageText,
+            author : customer._id,
+            status,
+          });
+        } else {
+            console.log("Webhook : Incoming media message");
+            const url = messageUrl;
+            const __dirname = path.resolve();
+            const fileName = `${messageType}-${messageUid}`;
+            const filePath = path.join(__dirname, "public/temp", fileName);
+    
+            console.log("FileName:", fileName);
+            console.log("FilePath:", filePath);
+            console.log("Fetching file...");
+    
+            const response = await fetch(url);
   
-          console.log("FileName:", fileName);
-          console.log("FilePath:", filePath);
-          console.log("Fetching file...");
+            console.log("Response:", response);
+    
+            if (!response.ok) {
+              console.error("Error fetching file:", response.status, response.statusText);
+              return res.status(response.status).json({ error: "File not found" });
+            }
+    
+            const buffer = await response.buffer();
+            await fs.promises.writeFile(filePath, buffer);
+            console.log("File saved:", filePath);
+    
+            // Upload the file to AWS
+            const file = {
+              filename : fileName,
+              path : filePath,
+              mimetype : messageMimeType,
+              size : messageSize
+            }
+            let uploadedFile;
+            try {
+              uploadedFile = await addFile("messages", file);
+              console.log("File uploaded:", uploadedFile);
+            } catch (uploadError) {
+              console.error("Error uploading file:", uploadError);
+              return res.status(500).json({ error: "Error uploading file" });
+            }
   
-          const response = await fetch(url);
+          // Create a new message
+          newMessage = new Message({
+            conversation: conversation._id,
+            type: msgType,
+            name: fileName,
+            size: messageSize,
+            url: uploadedFile,
+            mimeType: messageMimeType,
+            author : customer._id,
+            status,
+          });
+        }
+      }
+      else {
+        console.log("Webhook : Outgoing message");
+        if(msgType === "text") {
+          console.log("Webhook : Outgoing text message");
+          newMessage = new Message({
+            conversation: conversation._id,
+            type : msgType,
+            text : messageText,
+            author : config.admin,
+            status,
+          });
+        } else {
+            console.log("Webhook : Outgoing media message");
+            const url = messageUrl;
+            const __dirname = path.resolve();
+            const fileName = `${messageType}-${messageUid}`;
+            const filePath = path.join(__dirname, "public/temp", fileName);
+    
+            console.log("FileName:", fileName);
+            console.log("FilePath:", filePath);
+            console.log("Fetching file...");
+    
+            const response = await fetch(url);
   
-          if (!response.ok) {
-            console.error("Error fetching file:", response.status, response.statusText);
-            return res.status(response.status).json({ error: "File not found" });
-          }
+            console.log("Response:", response);
+    
+            if (!response.ok) {
+              console.error("Error fetching file:", response.status, response.statusText);
+              return res.status(response.status).json({ error: "File not found" });
+            }
+    
+            const buffer = await response.buffer();
+            await fs.promises.writeFile(filePath, buffer);
+            console.log("File saved:", filePath);
+    
+            // Upload the file to AWS
+            const file = {
+              filename : fileName,
+              path : filePath,
+              mimetype : messageMimeType,
+              size : messageSize
+            }
+            let uploadedFile;
+            try {
+              uploadedFile = await addFile("messages", file);
+              console.log("File uploaded:", uploadedFile);
+            } catch (uploadError) {
+              console.error("Error uploading file:", uploadError);
+              return res.status(500).json({ error: "Error uploading file" });
+            }
   
-          const buffer = await response.buffer();
-          await fs.promises.writeFile(filePath, buffer);
-          console.log("File saved:", filePath);
-  
-          // Upload the file to AWS
-          const file = {
-            filename : fileName,
-            path : filePath,
-            mimetype : messageMimeType,
-            size : messageSize
-          }
-          let uploadedFile;
-          try {
-            uploadedFile = await addFile("messages", file);
-            console.log("File uploaded:", uploadedFile);
-          } catch (uploadError) {
-            console.error("Error uploading file:", uploadError);
-            return res.status(500).json({ error: "Error uploading file" });
-          }
-
-        // Create a new message
-        newMessage = new Message({
-          conversation: conversation._id,
-          type: msgType,
-          name: fileName,
-          size: messageSize,
-          url: uploadedFile,
-          mimeType: messageMimeType,
-          author : customer._id,
-          status,
-        });
+          // Create a new message
+          newMessage = new Message({
+            conversation: conversation._id,
+            type: msgType,
+            name: fileName,
+            size: messageSize,
+            url: uploadedFile,
+            mimeType: messageMimeType,
+            author : config.admin,
+            status,
+          });
+        }
       }
 
       await newMessage.save();

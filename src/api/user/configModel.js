@@ -7,6 +7,11 @@ const configSchema = new mongoose.Schema(
       ref: "User",
       default: null,
     },
+    admin : {
+      type : String,
+      ref : "User",
+      default : null
+    }
   },
   {
     timestamps: true,
