@@ -425,7 +425,7 @@ export const handleWebhook = async (req, res, next) => {
         if(msgType === "text") {
           console.log("Webhook : Incoming text message");
           newMessage = new Message({
-            _id : messageCuid,
+            _id : `message-`+nanoid(),
             conversation: conversation._id,
             type : msgType,
             text : messageText,
@@ -474,7 +474,7 @@ export const handleWebhook = async (req, res, next) => {
   
           // Create a new message
           newMessage = new Message({
-            _id : messageCuid,
+            _id : `message-`+nanoid(),
             conversation: conversation._id,
             type: msgType,
             name: fileName,
@@ -491,7 +491,7 @@ export const handleWebhook = async (req, res, next) => {
         if(msgType === "text") {
           console.log("Webhook : Outgoing text message");
           newMessage = new Message({
-            _id : messageCuid,
+            _id : `message-`+nanoid(),
             conversation: conversation._id,
             type : msgType,
             text : messageText,
@@ -540,7 +540,7 @@ export const handleWebhook = async (req, res, next) => {
   
           // Create a new message
           newMessage = new Message({
-            _id : messageCuid,
+            _id : `message-`+nanoid(),
             conversation: conversation._id,
             type: msgType,
             name: fileName,
