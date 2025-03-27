@@ -35,9 +35,13 @@ export const getUsers = async (req, res, next) => {
       });
     }
 
+    // get total count of users
+    const totalUsers = await User.countDocuments({ role: "user" });
+
     res.status(200).json({
       message: "Users fetched",
       users: usersData,
+      totalUsers,
     });
   } catch (error) {
     next(error);

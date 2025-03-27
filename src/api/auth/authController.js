@@ -30,6 +30,10 @@ export const login = async (req, res, next) => {
       throw createHttpError(401, "Invalid email or password");
     }
 
+    if (user.isActive === false) {
+      throw createHttpError(401, "User is not active, please contact admin");
+    }
+
     const auth_token = generateToken({
       _id: user._id,
       email: user.email,

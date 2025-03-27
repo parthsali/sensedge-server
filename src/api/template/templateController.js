@@ -28,7 +28,11 @@ export const getTemplates = async (req, res, next) => {
       }
     }
 
-    res.status(200).json({ message: "Templates fetched", templates });
+    const totalTemplates = await Template.countDocuments();
+
+    res
+      .status(200)
+      .json({ message: "Templates fetched", templates, totalTemplates });
   } catch (error) {
     next(error);
   }

@@ -75,9 +75,12 @@ export const getCustomers = async (req, res, next) => {
       })
     );
 
+    const totalCustomers = await Customer.countDocuments();
+
     res.status(200).json({
       message: "Customers retrieved successfully",
       customers: customersWithConversations,
+      totalCustomers,
     });
   } catch (error) {
     next(error);
