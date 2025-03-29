@@ -8,4 +8,5 @@ export const createTemplateSchema = Joi.object({
 export const updateTemplateSchema = Joi.object({
   name: Joi.string().required(),
   text: Joi.string().required(),
+  deletedFiles: Joi.array().items(Joi.string()),
 });
