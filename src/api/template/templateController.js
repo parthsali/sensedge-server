@@ -134,13 +134,11 @@ export const updateTemplate = async (req, res, next) => {
 
     let { name, text, deletedFiles } = req.body;
 
-    if (typeof deletedFiles === "string") {
-      deletedFiles = [deletedFiles];
+    if (!Array.isArray(deletedFiles)) {
+      deletedFiles = typeof deletedFiles === "string" ? [deletedFiles] : [];
     }
 
-    deletedFiles = deletedFiles || [];
-
-    console.log("deletedFiles", deletedFiles);
+    deletedFiles = deletedFiles.map(String);
 
     const newFiles = req.files || [];
     let updatedFiles = template.files || [];
@@ -148,6 +146,14 @@ export const updateTemplate = async (req, res, next) => {
     updatedFiles = updatedFiles.filter(
       (file) => !deletedFiles.includes(file._id.toString())
     );
+
+    const filesToDelete = template.files.filter((file) =>
+      deletedFiles.includes(file._id.toString())
+    );
+
+    for (const fileToDelete of filesToDelete) {
+      await deleteFile(fileToDelete.url);
+    }
 
     for (const file of newFiles) {
       const uploadedFile = await addFile("templates", file);
@@ -164,20 +170,6 @@ export const updateTemplate = async (req, res, next) => {
     template.name = name;
     template.text = text;
     template.files = updatedFiles;
-
-    const filesToDelete = template.files.filter((file) =>
-      deletedFiles.includes(file._id.toString())
-    );
-
-    console.log("filesToDelete", filesToDelete);
-
-    for (const file of filesToDelete) {
-      await deleteFile(file.url);
-    }
-
-    for (const fileToDelete of filesToDelete) {
-      await deleteFile(fileToDelete.url);
-    }
 
     await template.save();
 
