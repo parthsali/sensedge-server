@@ -2,9 +2,9 @@ import mongoose from "mongoose";
 
 const messageSchema = new mongoose.Schema(
   {
-    _id : {
+    _id: {
       type: String,
-      required: true
+      required: true,
     },
     conversation: {
       type: mongoose.Schema.Types.ObjectId,
@@ -45,7 +45,7 @@ const messageSchema = new mongoose.Schema(
     url: {
       type: String,
     },
-    
+
     mimeType: {
       type: String,
     },

@@ -8,7 +8,11 @@ import { getFileSignedUrl } from "../../services/awsService.js";
 import Config from "../user/configModel.js";
 import Customer from "../customer/customerModel.js";
 import { customAlphabet } from "nanoid";
-import { sendText } from "../../services/waboxappService.js";
+import {
+  sendImage,
+  sendText,
+  sendFile,
+} from "../../services/waboxappService.js";
 import fetch from "node-fetch";
 import fs from "fs";
 import path from "path";
@@ -24,6 +28,10 @@ export const sendMessage = async (req, res, next) => {
     }
 
     const { conversationId, type } = req.body;
+
+    if (!["text", "image", "video", "file"].includes(type)) {
+      throw createHttpError(400, "Invalid message type");
+    }
 
     const user = req.user;
 
@@ -48,21 +56,14 @@ export const sendMessage = async (req, res, next) => {
     if (type === "text") {
       const { text } = req.body;
 
-      const message_id = "message-" + nanoid();
-
       const customer = await Customer.findById(conversation.customer);
 
-      const response = await sendText(customer.phone, message_id, text);
-
-      if (!response.success) {
-        await Message.findByIdAndDelete(newMessage._id);
-        throw createHttpError(500, "Message not sent");
+      if (!customer) {
+        throw createHttpError(404, "Customer not found");
       }
 
-      console.log("Message sent successfully", response);
-
       const newMessage = new Message({
-        _id: message_id,
+        _id: `message-${nanoid()}`,
         conversation: conversationId,
         author,
         type: "text",
@@ -70,13 +71,18 @@ export const sendMessage = async (req, res, next) => {
         status: "sent",
       });
 
-      console.log("Message saved in send message", newMessage);
-
       await newMessage.save();
 
       await Conversation.findByIdAndUpdate(conversationId, {
         lastMessage: newMessage._id,
       });
+
+      const response = await sendText(customer.phone, newMessage._id, text);
+
+      if (!response.success) {
+        await Message.findByIdAndDelete(newMessage._id);
+        throw createHttpError(500, "Message not sent");
+      }
 
       return res.status(201).json({ message: newMessage });
     }
@@ -90,13 +96,13 @@ export const sendMessage = async (req, res, next) => {
     const uploadedFile = await addFile("messages", file);
 
     const newMessage = new Message({
+      _id: `message-${nanoid()}`,
       conversation: conversationId,
       author,
       type,
       name: file.originalname,
       size: file.size,
       url: uploadedFile,
-      isAWSUrl: true,
       mimeType: file.mimetype,
     });
 
@@ -107,6 +113,34 @@ export const sendMessage = async (req, res, next) => {
     });
 
     newMessage.url = await getFileSignedUrl(newMessage.url);
+
+    const customer = await Customer.findById(conversation.customer);
+
+    if (!customer) {
+      throw createHttpError(404, "Customer not found");
+    }
+
+    if (type === "image") {
+      const response = await sendImage(
+        customer.phone,
+        newMessage._id,
+        newMessage.url
+      );
+      if (!response.success) {
+        await Message.findByIdAndDelete(newMessage._id);
+        throw createHttpError(500, "Message not sent");
+      }
+    } else {
+      const response = await sendFile(
+        customer.phone,
+        newMessage._id,
+        newMessage.url
+      );
+      if (!response.success) {
+        await Message.findByIdAndDelete(newMessage._id);
+        throw createHttpError(500, "Message not sent");
+      }
+    }
 
     return res.status(201).json({ message: newMessage });
   } catch (err) {
