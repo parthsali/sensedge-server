@@ -368,15 +368,11 @@ export const handleWebhook = async (req, res, next) => {
         size: messageSize,
       } = body;
 
-      // console all the fields
-
-      // return res.status(200).json({ success: true, message: "Webhook received" });
-
-      // Map ACK status to message status
-
       let status;
       switch (Number(ack)) {
         case 0:
+          status = "pending";
+          break;
         case 1:
           status = "sent";
           break;
@@ -390,10 +386,8 @@ export const handleWebhook = async (req, res, next) => {
           status = "failed";
       }
 
-      // Map message type; if it's 'chat', treat it as text
       const msgType = messageType === "chat" ? "text" : messageType;
 
-      // Supported message types: text, image, video, file
       if (!["text", "image", "video", "file"].includes(msgType)) {
         throw createHttpError(400, "Invalid message type");
       }
@@ -431,135 +425,44 @@ export const handleWebhook = async (req, res, next) => {
         await conversation.save();
       }
 
-      console.log("Webhook : Customer created", customer);
-
-      console.log("Webhook : Conversation created", conversation);
-
       // Create a new message using the incoming data
+      if (messageDir === "o") {
+        return res.status(200).json({
+          success: true,
+          message: "Webhook received : Outgoing message",
+        });
+      }
+
       let newMessage;
-      if (messageDir === "i") {
-        console.log("Webhook : Incoming message");
-        if (msgType === "text") {
-          console.log("Webhook : Incoming text message");
-          newMessage = new Message({
-            _id: `message-` + nanoid(),
-            conversation: conversation._id,
-            type: msgType,
-            text: messageText,
-            author: customer._id,
-            status,
-          });
-        } else {
-          console.log("Webhook : Incoming media message");
-          const url = messageUrl;
-          const baseDir = process.cwd();
-          const tempDir = path.join(baseDir, "public", "temp");
 
-          // Ensure the temp directory exists
-          if (!fs.existsSync(tempDir)) {
-            fs.mkdirSync(tempDir, { recursive: true });
-          }
-
-          const fileName = `${messageType}-${url.split("/").pop()}`;
-          const filePath = path.join(tempDir, fileName);
-
-          console.log("fileName", fileName);
-          console.log("filePath", filePath);
-          console.log("Fetching file...");
-
-          try {
-            const response = await fetch(url, {
-              headers: {
-                "User-Agent":
-                  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36",
-              },
-            });
-            console.log("Response after fetch", response);
-            if (!response.ok) {
-              console.error(
-                "Error fetching file:",
-                response.status,
-                response.statusText
-              );
-              return res
-                .status(response.status)
-                .json({ error: response.statusText });
-            }
-            const buffer = await response.buffer();
-            await fs.promises.writeFile(filePath, buffer);
-            console.log("File saved:", filePath);
-          } catch (fetchError) {
-            console.error("Error fetching file:", fetchError);
-            return res.status(500).json({ error: "Error fetching file" });
-          }
-
-          const file = {
-            filename: fileName,
-            path: filePath,
-            mimetype: messageMimeType,
-            size: messageSize,
-          };
-
-          console.log("Uploading file to AWS...");
-          let uploadedFile;
-          try {
-            uploadedFile = await addFile("messages", file);
-            console.log("File uploaded", uploadedFile);
-          } catch (uploadError) {
-            console.error("Error uploading file:", uploadError);
-            return res.status(500).json({ error: "Error uploading file" });
-          }
-
-          newMessage = new Message({
-            _id: `message-${nanoid()}`,
-            conversation: conversation._id,
-            type: msgType,
-            name: fileName,
-            size: messageSize,
-            url: uploadedFile,
-            mimeType: messageMimeType,
-            author: customer._id,
-            status,
-          });
-        }
+      if (msgType === "text") {
+        newMessage = new Message({
+          _id: `message-` + nanoid(),
+          conversation: conversation._id,
+          type: msgType,
+          text: messageText,
+          author: customer._id,
+          status,
+        });
       } else {
-        console.log("Webhook : Outgoing message");
+        const url = messageUrl;
+        const baseDir = process.cwd();
+        const tempDir = path.join(baseDir, "public", "temp");
 
-        const messageExists = messageCuid.startsWith("message-");
-
-        if (messageExists) {
-          console.log("Webhook : Message already exists");
-          return res
-            .status(200)
-            .json({ success: true, message: "Webhook received" });
+        if (!fs.existsSync(tempDir)) {
+          fs.mkdirSync(tempDir, { recursive: true });
         }
-        if (msgType === "text") {
-          console.log("Webhook : Outgoing text message");
 
-          newMessage = new Message({
-            _id: `message-` + nanoid(),
-            conversation: conversation._id,
-            type: msgType,
-            text: messageText,
-            author: config.admin,
-            status,
+        const fileName = `${messageType}-${url.split("/").pop()}`;
+        const filePath = path.join(tempDir, fileName);
+
+        try {
+          const response = await fetch(url, {
+            headers: {
+              "User-Agent":
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36",
+            },
           });
-        } else {
-          console.log("Webhook : Outgoing media message");
-
-          const url = messageUrl;
-          const __dirname = path.resolve();
-          const fileName = `${messageType}-${messageUid}`;
-          const filePath = path.join(__dirname, "public/temp", fileName);
-
-          console.log("FileName:", fileName);
-          console.log("FilePath:", filePath);
-          console.log("Fetching file...");
-
-          const response = await fetch(url);
-
-          console.log("Response:", response);
-
           if (!response.ok) {
             console.error(
               "Error fetching file:",
@@ -568,74 +471,67 @@ export const handleWebhook = async (req, res, next) => {
             );
             return res
               .status(response.status)
-              .json({ error: "File not found" });
+              .json({ error: response.statusText });
           }
-
           const buffer = await response.buffer();
           await fs.promises.writeFile(filePath, buffer);
           console.log("File saved:", filePath);
-
-          // Upload the file to AWS
-          const file = {
-            filename: fileName,
-            path: filePath,
-            mimetype: messageMimeType,
-            size: messageSize,
-          };
-          let uploadedFile;
-          try {
-            uploadedFile = await addFile("messages", file);
-            console.log("File uploaded:", uploadedFile);
-          } catch (uploadError) {
-            console.error("Error uploading file:", uploadError);
-            return res.status(500).json({ error: "Error uploading file" });
-          }
-
-          // Create a new message
-          newMessage = new Message({
-            _id: `message-` + nanoid(),
-            conversation: conversation._id,
-            type: msgType,
-            name: fileName,
-            size: messageSize,
-            url: uploadedFile,
-            mimeType: messageMimeType,
-            author: config.admin,
-            status,
-          });
+        } catch (fetchError) {
+          console.error("Error fetching file:", fetchError);
+          return res.status(500).json({ error: "Error fetching file" });
         }
+
+        const file = {
+          filename: fileName,
+          path: filePath,
+          mimetype: messageMimeType,
+          size: messageSize,
+        };
+
+        let uploadedFile;
+        try {
+          uploadedFile = await addFile("messages", file);
+          console.log("File uploaded", uploadedFile);
+        } catch (uploadError) {
+          console.error("Error uploading file:", uploadError);
+          return res.status(500).json({ error: "Error uploading file" });
+        }
+
+        newMessage = new Message({
+          _id: `message-${nanoid()}`,
+          conversation: conversation._id,
+          type: msgType,
+          name: fileName,
+          size: messageSize,
+          url: uploadedFile,
+          mimeType: messageMimeType,
+          author: customer._id,
+          status,
+        });
       }
 
       await newMessage.save();
 
-      console.log("Webhook : New Message saved", newMessage);
-
-      // Update conversation's lastMessage field
       conversation.lastMessage = newMessage._id;
       await conversation.save();
-
-      console.log("Webhook : Conversation updated", conversation);
-
-      console.log("Message saved", newMessage);
 
       return res
         .status(200)
         .json({ success: true, message: "Webhook received" });
     } else if (event === "ack") {
-      console.log("Received ACK event", req.body);
-      // Extract fields for the ACK event
       const { cuid, ack: ackValue } = req.body;
 
-      // Find the message by custom unique ID (cuid)
       const message = await Message.findOne({ _id: cuid });
+
       if (!message) {
         throw createHttpError(404, "Message not found");
       }
 
-      // Map ACK value to status
       let status;
       switch (Number(ackValue)) {
         case 0:
+          status = "pending";
+          break;
         case 1:
           status = "sent";
           break;
@@ -649,11 +545,8 @@ export const handleWebhook = async (req, res, next) => {
           status = "failed";
       }
 
-      // Update the message status
       message.status = status;
       await message.save();
-
-      console.log("Message status updated", message);
 
       return res
         .status(200)
