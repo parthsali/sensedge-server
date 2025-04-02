@@ -134,6 +134,10 @@ export const updateTemplate = async (req, res, next) => {
 
     let { name, text, deletedFiles } = req.body;
 
+    if (typeof deletedFiles === "string") {
+      deletedFiles = [deletedFiles];
+    }
+
     deletedFiles = deletedFiles || [];
 
     console.log("deletedFiles", deletedFiles);
