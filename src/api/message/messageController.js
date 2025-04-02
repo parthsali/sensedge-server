@@ -80,7 +80,8 @@ export const sendMessage = async (req, res, next) => {
       const response = await sendText(customer.phone, newMessage._id, text);
 
       if (!response.success) {
-        await Message.findByIdAndDelete(newMessage._id);
+        newMessage.status = "failed";
+        await newMessage.save();
         throw createHttpError(500, "Message not sent");
       }
 
@@ -112,35 +113,31 @@ export const sendMessage = async (req, res, next) => {
       lastMessage: newMessage._id,
     });
 
-    newMessage.url = await getFileSignedUrl(newMessage.url);
-
     const customer = await Customer.findById(conversation.customer);
 
     if (!customer) {
       throw createHttpError(404, "Customer not found");
     }
 
+    const fileUrl = await getFileSignedUrl(newMessage.url);
+
     if (type === "image") {
-      const response = await sendImage(
-        customer.phone,
-        newMessage._id,
-        newMessage.url
-      );
+      const response = await sendImage(customer.phone, newMessage._id, fileUrl);
       if (!response.success) {
-        await Message.findByIdAndDelete(newMessage._id);
+        newMessage.status = "failed";
+        await newMessage.save();
         throw createHttpError(500, "Message not sent");
       }
     } else {
-      const response = await sendFile(
-        customer.phone,
-        newMessage._id,
-        newMessage.url
-      );
+      const response = await sendFile(customer.phone, newMessage._id, fileUrl);
       if (!response.success) {
-        await Message.findByIdAndDelete(newMessage._id);
+        newMessage.status = "failed";
+        await newMessage.save();
         throw createHttpError(500, "Message not sent");
       }
     }
+
+    newMessage.url = fileUrl;
 
     return res.status(201).json({ message: newMessage });
   } catch (err) {
