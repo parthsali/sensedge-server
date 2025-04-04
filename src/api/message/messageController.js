@@ -189,6 +189,101 @@ export const updateStarredMessage = async (req, res, next) => {
   }
 };
 
+export const forwardMessage = async (req, res, next) => {
+  try {
+    const { messageId, conversationId } = req.body;
+
+    if (!messageId) {
+      throw createHttpError(400, "Message ID is required");
+    }
+
+    if (!conversationId) {
+      throw createHttpError(400, "Conversation ID is required");
+    }
+
+    console.log("Message ID", messageId);
+
+    const message = await Message.findById(messageId);
+
+    if (!message) {
+      throw createHttpError(404, "Message not found");
+    }
+
+    const newMessage = new Message({
+      _id: `message-${nanoid()}`,
+      conversation: conversationId,
+      author: message.author,
+      type: message.type,
+      text: message.text,
+      name: message.name,
+      size: message.size,
+      url: message.url,
+      mimeType: message.mimeType,
+      status: "sent",
+    });
+
+    await newMessage.save();
+
+    console.log("New message", newMessage);
+    console.log("Conversation ID", conversationId);
+
+    await Conversation.findByIdAndUpdate(conversationId, {
+      lastMessage: newMessage._id,
+    });
+
+    const conversation = await Conversation.findById(conversationId);
+
+    if (!conversation) {
+      throw createHttpError(404, "Conversation not found");
+    }
+
+    const customer = await Customer.findById(conversation.customer);
+    if (!customer) {
+      throw createHttpError(404, "Customer not found");
+    }
+
+    console.log("Customer", customer);
+    console.log("Customer phone", customer.phone);
+    console.log("New message ID", newMessage._id);
+
+    if (message.type === "text") {
+      console.log("Text message", message.text);
+      const response = await sendText(
+        customer.phone,
+        newMessage._id,
+        message.text
+      );
+
+      console.log("Response", response);
+      if (!response.success) {
+        newMessage.status = "failed";
+        await newMessage.save();
+        throw createHttpError(500, "Message not sent");
+      }
+    } else if (message.type === "image") {
+      const fileUrl = await getFileSignedUrl(newMessage.url);
+      const response = await sendImage(customer.phone, newMessage._id, fileUrl);
+      if (!response.success) {
+        newMessage.status = "failed";
+        await newMessage.save();
+        throw createHttpError(500, "Message not sent");
+      }
+    } else {
+      const fileUrl = await getFileSignedUrl(newMessage.url);
+      const response = await sendFile(customer.phone, newMessage._id, fileUrl);
+      if (!response.success) {
+        newMessage.status = "failed";
+        await newMessage.save();
+        throw createHttpError(500, "Message not sent");
+      }
+    }
+
+    return res.status(201).json({ message: newMessage });
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const receiveMessage = async (req, res, next) => {
   try {
     const { error } = sendMessageSchema.validate(req.body);

@@ -6,6 +6,7 @@ import {
   searchMessage,
   handleWebhook,
   updateStarredMessage,
+  forwardMessage,
 } from "./messageController.js";
 import { auth } from "../../middlewares/authMiddleware.js";
 import { upload } from "../../middlewares/multerMiddleware.js";
@@ -16,6 +17,8 @@ const router = express.Router();
 router.post("/send-message", auth, upload.single("file"), sendMessage);
 
 router.patch("/update-starred-status/:id", auth, updateStarredMessage);
+
+router.post("/forward-message", auth, forwardMessage);
 
 router.post("/receive-message", auth, upload.single("file"), receiveMessage);
 
