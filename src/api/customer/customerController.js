@@ -1,11 +1,12 @@
 import createHttpError from "http-errors";
+import Config from "../user/configModel.js";
 import Customer from "./customerModel.js";
 import { customerValidation } from "./customerValidation.js";
 import Conversation from "../conversation/conversationModel.js";
 import { customAlphabet } from "nanoid";
 import xlsx from "xlsx";
 import fs from "fs";
-import Config from "../user/configModel.js";
+import path from "path";
 
 const nanoid = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 12);
 
@@ -141,6 +142,29 @@ export const createCustomers = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+};
+
+export const downloadTemplate = async (req, res, next) => {
+  // current directory
+  const currentDir = process.cwd();
+
+  const filePath = path.join(
+    currentDir,
+    "public",
+    "templates",
+    "customer-template.xlsx"
+  );
+
+  if (!fs.existsSync(filePath)) {
+    return next(createHttpError(404, "Template not found"));
+  }
+
+  res.download(filePath, "Customer-Template.xlsx", (err) => {
+    if (err) {
+      console.error(err);
+      return next(createHttpError(500, "Error downloading template"));
+    }
+  });
 };
 
 export const getCustomers = async (req, res, next) => {

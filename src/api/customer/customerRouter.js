@@ -7,6 +7,7 @@ import {
   updateCustomer,
   bulkAdd,
   searchCustomer,
+  downloadTemplate,
 } from "./customerController.js";
 import { auth } from "../../middlewares/authMiddleware.js";
 import { upload } from "../../middlewares/multerMiddleware.js";
@@ -15,6 +16,7 @@ const router = express.Router();
 
 router.post("/create-customer", auth, createCustomer);
 
+router.get("/download-template", downloadTemplate);
 router.post("/create-customers", auth, upload.single("file"), createCustomers);
 
 router.get("/get-customers", auth, getCustomers);
