@@ -3,6 +3,9 @@ import Customer from "./customerModel.js";
 import { customerValidation } from "./customerValidation.js";
 import Conversation from "../conversation/conversationModel.js";
 import { customAlphabet } from "nanoid";
+import xlsx from "xlsx";
+import fs from "fs";
+import Config from "../user/configModel.js";
 
 const nanoid = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 12);
 
@@ -44,6 +47,96 @@ export const createCustomer = async (req, res, next) => {
     res.status(201).json({
       message: "Customer created successfully",
       customer,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const createCustomers = async (req, res, next) => {
+  try {
+    const { file } = req;
+
+    if (!file) {
+      return next(createHttpError(400, "File is required"));
+    }
+
+    const tempFilePath = file.path;
+
+    const workbook = xlsx.readFile(tempFilePath);
+
+    const sheetName = workbook.SheetNames[0];
+
+    const worksheet = workbook.Sheets[sheetName];
+
+    const data = xlsx.utils.sheet_to_json(worksheet);
+
+    fs.unlinkSync(tempFilePath);
+
+    const customers = [];
+
+    const config = await Config.findOne();
+
+    if (!config) {
+      return next(createHttpError(500, "Default user not found"));
+    }
+
+    for (const customer of data) {
+      const name = customer.Name;
+      const phone = String(customer.Phone);
+      const company = customer.Company;
+
+      const customerExists = await Customer.findOne({ phone: phone });
+
+      if (customerExists) {
+        continue;
+      }
+
+      const assigned_user = config.defaultUser;
+
+      const customerData = {
+        name: name || "Not provided",
+        phone: phone || "910000000000",
+        company: company || "Not provided",
+        assigned_user,
+      };
+
+      const { error } = customerValidation.validate(customerData);
+
+      if (error) {
+        console.error(error.details[0].message);
+        continue;
+      }
+
+      customers.push({
+        _id: `customer-${nanoid()}`,
+        ...customerData,
+      });
+    }
+
+    if (customers.length === 0) {
+      return next(createHttpError(400, "No customers to create"));
+    }
+
+    // use insertMany to bulk insert customers
+    await Customer.insertMany(customers);
+
+    // create a conversation for each customer
+    const conversations = customers.map((customer) => {
+      const conversation = new Conversation({
+        customer: customer._id,
+        user: customer.assigned_user,
+        lastMessage: null,
+      });
+
+      return conversation.save();
+    });
+
+    await Promise.all(conversations);
+
+    res.status(201).json({
+      message: "Customers created successfully",
+      customers,
     });
   } catch (error) {
     next(error);

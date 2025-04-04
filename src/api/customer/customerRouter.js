@@ -1,6 +1,7 @@
 import express from "express";
 import {
   createCustomer,
+  createCustomers,
   getCustomer,
   getCustomers,
   updateCustomer,
@@ -8,10 +9,14 @@ import {
   searchCustomer,
 } from "./customerController.js";
 import { auth } from "../../middlewares/authMiddleware.js";
+import { upload } from "../../middlewares/multerMiddleware.js";
 
 const router = express.Router();
 
 router.post("/create-customer", auth, createCustomer);
+
+router.post("/create-customers", auth, upload.single("file"), createCustomers);
+
 router.get("/get-customers", auth, getCustomers);
 router.get("/get-customer/:id", auth, getCustomer);
 router.put("/update-customer/:id", auth, updateCustomer);
