@@ -97,7 +97,56 @@ export const getConversationMessages = async (req, res, next) => {
 
     const messages = await Message.find(
       { conversation: req.params.id },
-      { conversation: 0, updatedAt: 0 , isAWSUrl: 0}
+      { conversation: 0, updatedAt: 0 }
+    )
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .skip(skip)
+      .populate({
+        path: "author",
+        select: "name ",
+      });
+
+    for (const message of messages) {
+      if (["image", "video", "file"].includes(message.type)) {
+        message.url = await getFileSignedUrl(message.url);
+      }
+    }
+
+    res
+      .status(200)
+      .json({ message: "Messages fetched successfully", messages });
+  } catch (error) {
+    next(createHttpError(500, error.message));
+  }
+};
+
+export const getStarredMessages = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const conversation = await Conversation.findById(id);
+
+    if (!conversation) {
+      return next(createHttpError(404, "Conversation not found"));
+    }
+
+    if (
+      conversation.user.toString() !== req.user._id.toString() &&
+      req.user.role !== "admin"
+    ) {
+      return next(
+        createHttpError(403, "You are not allowed to view this conversation")
+      );
+    }
+
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const skip = (page - 1) * limit;
+
+    const messages = await Message.find(
+      { conversation: id, isStarred: true },
+      { conversation: 0, updatedAt: 0 }
     )
       .sort({ createdAt: -1 })
       .limit(limit)

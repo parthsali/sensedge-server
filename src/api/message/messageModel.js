@@ -54,6 +54,10 @@ const messageSchema = new mongoose.Schema(
       enum: ["sent", "delivered", "read", "failed"],
       default: "sent",
     },
+    isStarred: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );

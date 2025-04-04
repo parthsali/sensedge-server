@@ -145,9 +145,19 @@ export const sendMessage = async (req, res, next) => {
   }
 };
 
-export const updateMessageStatus = async (req, res, next) => {
+export const updateStarredMessage = async (req, res, next) => {
   try {
-    const { messageId } = req.params;
+    const { id: messageId } = req.params;
+
+    if (!messageId) {
+      throw createHttpError(400, "Message ID is required");
+    }
+
+    const { starred } = req.body;
+
+    if (starred === undefined) {
+      throw createHttpError(400, "Starred status is required");
+    }
 
     const message = await Message.findById(messageId);
 
@@ -163,23 +173,17 @@ export const updateMessageStatus = async (req, res, next) => {
     ) {
       throw createHttpError(
         403,
-        "You are not allowed to update the status of this message"
+        "You are not allowed to update the starred status of this message"
       );
     }
 
-    const { status } = req.body;
-
-    if (status !== "read") {
-      throw createHttpError(400, "Invalid status");
-    }
-
-    message.status = status;
+    message.isStarred = starred;
 
     await message.save();
 
-    return res
-      .status(200)
-      .json({ message: "Message status updated", updatedMessage: message });
+    console.log("Message starred status updated", message);
+
+    return res.status(200).json({ message: "Message starred status updated" });
   } catch (err) {
     next(err);
   }

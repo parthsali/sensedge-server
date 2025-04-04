@@ -5,6 +5,7 @@ import {
   getUserConversations,
   reassignConversation,
   searchConversation,
+  getStarredMessages,
 } from "./conversationController.js";
 
 import { auth } from "../../middlewares/authMiddleware.js";
@@ -24,6 +25,8 @@ router.patch(
 // user
 router.get("/get-user-conversations", auth, getUserConversations);
 router.get("/get-conversation-messages/:id", auth, getConversationMessages);
+
+router.get("/get-starred-messages/:id", auth, getStarredMessages);
 
 router.get("/search", auth, searchConversation);
 

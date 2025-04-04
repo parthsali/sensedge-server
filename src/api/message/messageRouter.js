@@ -3,18 +3,19 @@ import {
   sendMessage,
   receiveMessage,
   sendTemplate,
-  updateMessageStatus,
   searchMessage,
   handleWebhook,
+  updateStarredMessage,
 } from "./messageController.js";
 import { auth } from "../../middlewares/authMiddleware.js";
 import { upload } from "../../middlewares/multerMiddleware.js";
+import { get } from "mongoose";
 
 const router = express.Router();
 
 router.post("/send-message", auth, upload.single("file"), sendMessage);
 
-router.patch("/:messageId/status", auth, updateMessageStatus);
+router.patch("/update-starred-status/:id", auth, updateStarredMessage);
 
 router.post("/receive-message", auth, upload.single("file"), receiveMessage);
 
