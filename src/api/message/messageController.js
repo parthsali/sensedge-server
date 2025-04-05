@@ -391,6 +391,7 @@ export const sendTemplate = async (req, res, next) => {
 
     if (template.text !== "") {
       const newMessage = new Message({
+        _id: `message-${nanoid()}`,
         conversation: conversationId,
         author,
         type: "text",
@@ -410,6 +411,7 @@ export const sendTemplate = async (req, res, next) => {
       const fileData = files[i];
 
       const newMessage = new Message({
+        _id: `message-${nanoid()}`,
         conversation: conversationId,
         author,
         type: fileData.type,
