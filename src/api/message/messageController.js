@@ -403,6 +403,21 @@ export const sendTemplate = async (req, res, next) => {
       await Conversation.findByIdAndUpdate(conversationId, {
         lastMessage: newMessage._id,
       });
+
+      const customer = await Customer.findById(conversation.customer);
+
+      if (!customer) {
+        throw createHttpError(404, "Customer not found");
+      }
+      const text = template.text;
+
+      const response = await sendText(customer.phone, newMessage._id, text);
+
+      if (!response.success) {
+        newMessage.status = "failed";
+        await newMessage.save();
+        throw createHttpError(500, "Message not sent");
+      }
     }
 
     const files = template.files || [];
@@ -426,6 +441,38 @@ export const sendTemplate = async (req, res, next) => {
       await Conversation.findByIdAndUpdate(conversationId, {
         lastMessage: newMessage._id,
       });
+
+      const customer = await Customer.findById(conversation.customer);
+
+      if (!customer) {
+        throw createHttpError(404, "Customer not found");
+      }
+
+      const fileUrl = await getFileSignedUrl(newMessage.url);
+
+      if (type === "image") {
+        const response = await sendImage(
+          customer.phone,
+          newMessage._id,
+          fileUrl
+        );
+        if (!response.success) {
+          newMessage.status = "failed";
+          await newMessage.save();
+          throw createHttpError(500, "Message not sent");
+        }
+      } else {
+        const response = await sendFile(
+          customer.phone,
+          newMessage._id,
+          fileUrl
+        );
+        if (!response.success) {
+          newMessage.status = "failed";
+          await newMessage.save();
+          throw createHttpError(500, "Message not sent");
+        }
+      }
     }
 
     return res.status(201).json({ message: "Template sent successfully" });
