@@ -201,6 +201,8 @@ export const forwardMessage = async (req, res, next) => {
       throw createHttpError(400, "Conversation ID is required");
     }
 
+    const user = req.user;
+
     console.log("Message ID", messageId);
 
     const message = await Message.findById(messageId);
@@ -212,7 +214,7 @@ export const forwardMessage = async (req, res, next) => {
     const newMessage = new Message({
       _id: `message-${nanoid()}`,
       conversation: conversationId,
-      author: message.author,
+      author: user._id,
       type: message.type,
       text: message.text,
       name: message.name,
@@ -223,9 +225,6 @@ export const forwardMessage = async (req, res, next) => {
     });
 
     await newMessage.save();
-
-    console.log("New message", newMessage);
-    console.log("Conversation ID", conversationId);
 
     await Conversation.findByIdAndUpdate(conversationId, {
       lastMessage: newMessage._id,
@@ -242,19 +241,13 @@ export const forwardMessage = async (req, res, next) => {
       throw createHttpError(404, "Customer not found");
     }
 
-    console.log("Customer", customer);
-    console.log("Customer phone", customer.phone);
-    console.log("New message ID", newMessage._id);
-
     if (message.type === "text") {
-      console.log("Text message", message.text);
       const response = await sendText(
         customer.phone,
         newMessage._id,
         message.text
       );
 
-      console.log("Response", response);
       if (!response.success) {
         newMessage.status = "failed";
         await newMessage.save();
