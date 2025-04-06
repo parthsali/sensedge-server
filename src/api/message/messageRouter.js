@@ -7,6 +7,7 @@ import {
   handleWebhook,
   updateStarredMessage,
   forwardMessage,
+  handleSSE,
 } from "./messageController.js";
 import { auth } from "../../middlewares/authMiddleware.js";
 import { upload } from "../../middlewares/multerMiddleware.js";
@@ -31,5 +32,7 @@ router.post("/webhook", handleWebhook);
 router.get("/webhook", (req, res) => {
   return res.status(200).json({ message: "Webhook is working" });
 });
+
+router.get("/events", auth, handleSSE);
 
 export default router;

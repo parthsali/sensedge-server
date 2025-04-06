@@ -73,6 +73,8 @@ export const sendMessage = async (req, res, next) => {
 
       await newMessage.save();
 
+      sendMessageToUser(author, newMessage);
+
       await Conversation.findByIdAndUpdate(conversationId, {
         lastMessage: newMessage._id,
       });
@@ -108,6 +110,10 @@ export const sendMessage = async (req, res, next) => {
     });
 
     await newMessage.save();
+
+    newMessage.url = await getFileSignedUrl(newMessage.url);
+
+    sendMessageToUser(author, newMessage);
 
     await Conversation.findByIdAndUpdate(conversationId, {
       lastMessage: newMessage._id,
@@ -606,86 +612,84 @@ export const handleWebhook = async (req, res, next) => {
 
       // Create a new message using the incoming data
       let newMessage;
-      if (
-        messageDir === "o" &&
-        messageCuid &&
-        !messageCuid.startsWith("message-")
-      ) {
-        if (msgType === "text") {
-          newMessage = new Message({
-            _id: `message-` + nanoid(),
-            conversation: conversation._id,
-            type: msgType,
-            text: messageText,
-            author: config.admin,
-            status,
-          });
-        } else {
-          const url = messageUrl;
-          const baseDir = process.cwd();
-          const tempDir = path.join(baseDir, "public", "temp");
-
-          if (!fs.existsSync(tempDir)) {
-            fs.mkdirSync(tempDir, { recursive: true });
-          }
-
-          const fileName = `${messageType}-${url.split("/").pop()}`;
-          const filePath = path.join(tempDir, fileName);
-
-          try {
-            const response = await fetch(url, {
-              headers: {
-                "User-Agent":
-                  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36",
-              },
+      if (messageDir === "o") {
+        if (messageCuid && !messageCuid.startsWith("message")) {
+          if (msgType === "text") {
+            newMessage = new Message({
+              _id: `message-` + nanoid(),
+              conversation: conversation._id,
+              type: msgType,
+              text: messageText,
+              author: config.admin,
+              status,
             });
-            if (!response.ok) {
-              console.error(
-                "Error fetching file:",
-                response.status,
-                response.statusText
-              );
-              return res
-                .status(response.status)
-                .json({ error: response.statusText });
+          } else {
+            const url = messageUrl;
+            const baseDir = process.cwd();
+            const tempDir = path.join(baseDir, "public", "temp");
+
+            if (!fs.existsSync(tempDir)) {
+              fs.mkdirSync(tempDir, { recursive: true });
             }
-            const buffer = await response.buffer();
-            await fs.promises.writeFile(filePath, buffer);
-            console.log("File saved:", filePath);
-          } catch (fetchError) {
-            console.error("Error fetching file:", fetchError);
-            return res.status(500).json({ error: "Error fetching file" });
+
+            const fileName = `${messageType}-${url.split("/").pop()}`;
+            const filePath = path.join(tempDir, fileName);
+
+            try {
+              const response = await fetch(url, {
+                headers: {
+                  "User-Agent":
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36",
+                },
+              });
+              if (!response.ok) {
+                console.error(
+                  "Error fetching file:",
+                  response.status,
+                  response.statusText
+                );
+                return res
+                  .status(response.status)
+                  .json({ error: response.statusText });
+              }
+              const buffer = await response.buffer();
+              await fs.promises.writeFile(filePath, buffer);
+              console.log("File saved:", filePath);
+            } catch (fetchError) {
+              console.error("Error fetching file:", fetchError);
+              return res.status(500).json({ error: "Error fetching file" });
+            }
+
+            const file = {
+              filename: fileName,
+              path: filePath,
+              mimetype: messageMimeType,
+              size: messageSize,
+            };
+
+            let uploadedFile;
+            try {
+              uploadedFile = await addFile("messages", file);
+              console.log("File uploaded", uploadedFile);
+            } catch (uploadError) {
+              console.error("Error uploading file:", uploadError);
+              return res.status(500).json({ error: "Error uploading file" });
+            }
+
+            newMessage = new Message({
+              _id: `message-${nanoid()}`,
+              conversation: conversation._id,
+              type: msgType,
+              name: fileName,
+              size: messageSize,
+              url: uploadedFile,
+              mimeType: messageMimeType,
+              author: config.admin,
+              status,
+            });
           }
-
-          const file = {
-            filename: fileName,
-            path: filePath,
-            mimetype: messageMimeType,
-            size: messageSize,
-          };
-
-          let uploadedFile;
-          try {
-            uploadedFile = await addFile("messages", file);
-            console.log("File uploaded", uploadedFile);
-          } catch (uploadError) {
-            console.error("Error uploading file:", uploadError);
-            return res.status(500).json({ error: "Error uploading file" });
-          }
-
-          newMessage = new Message({
-            _id: `message-${nanoid()}`,
-            conversation: conversation._id,
-            type: msgType,
-            name: fileName,
-            size: messageSize,
-            url: uploadedFile,
-            mimeType: messageMimeType,
-            author: config.admin,
-            status,
-          });
         }
-      } else {
+      } else if (messageDir === "i") {
         if (msgType === "text") {
           newMessage = new Message({
             _id: `message-` + nanoid(),
@@ -764,6 +768,8 @@ export const handleWebhook = async (req, res, next) => {
 
       await newMessage.save();
 
+      sendMessageToUser(conversation.user, newMessage);
+
       conversation.lastMessage = newMessage._id;
       await conversation.save();
 
@@ -809,5 +815,42 @@ export const handleWebhook = async (req, res, next) => {
   } catch (error) {
     console.log("Error in webhook", error);
     next(error);
+  }
+};
+
+let clients = [];
+
+export const handleSSE = async (req, res, next) => {
+  try {
+    res.set({
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+    });
+
+    res.flushHeaders();
+
+    const user = req.user;
+
+    const clientId = user._id;
+    const newClient = { id: clientId, res };
+    clients.push(newClient);
+    console.log(`${clientId} Connected`);
+
+    req.on("close", () => {
+      console.log(`${clientId} Connection closed`);
+      clients = clients.filter((c) => c.id !== clientId);
+    });
+  } catch (error) {
+    console.error("Error in SSE:", error);
+    res.status(500).end();
+  }
+};
+
+const sendMessageToUser = (userId, message) => {
+  for (let client of clients) {
+    if (client.id.startsWith("admin") || client.id === userId) {
+      client.res.write(`data: ${JSON.stringify(message)}\n\n`);
+    }
   }
 };
