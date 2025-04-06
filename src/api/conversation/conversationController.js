@@ -230,7 +230,14 @@ export const searchConversation = async (req, res, next) => {
       return next(createHttpError(400, "Query is required"));
     }
 
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+
+    const skip = (page - 1) * limit;
+
     const conversations = await Conversation.find({}, { createdAt: 0 })
+      .limit(limit)
+      .skip(skip)
       .populate("user", "name email")
       .populate("customer", "name phone company")
       .populate("lastMessage")

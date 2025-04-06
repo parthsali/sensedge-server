@@ -489,12 +489,19 @@ export const searchMessage = async (req, res, next) => {
       throw createHttpError(400, "Query is required");
     }
 
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+
+    const skip = (page - 1) * limit;
+
     const messages = await Message.find({
       $or: [
         { text: { $regex: query, $options: "i" } },
         { name: { $regex: query, $options: "i" } },
       ],
-    });
+    })
+      .limit(limit)
+      .skip(skip);
 
     if (!messages) {
       throw createHttpError(404, "No messages found");

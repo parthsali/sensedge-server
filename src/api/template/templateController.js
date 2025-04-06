@@ -12,13 +12,21 @@ import {
 
 export const getTemplates = async (req, res, next) => {
   try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+
+    const skip = (page - 1) * limit;
+
     const templates = await Template.find(
       {},
       {
         createdAt: 0,
         updatedAt: 0,
       }
-    ).populate("createdBy", "name email");
+    )
+      .limit(limit)
+      .skip(skip)
+      .populate("createdBy", "name email");
 
     for (const template of templates) {
       const files = template.files || [];
@@ -183,6 +191,45 @@ export const updateTemplate = async (req, res, next) => {
   }
 };
 
+export const searchTemplate = async (req, res, next) => {
+  try {
+    const { query } = req.query;
+
+    if (!query) {
+      throw createHttpError(400, "Query is required");
+    }
+
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+
+    const skip = (page - 1) * limit;
+
+    const templates = await Template.find(
+      {
+        $or: [
+          { name: { $regex: query, $options: "i" } },
+          { text: { $regex: query, $options: "i" } },
+        ],
+      },
+      {
+        createdAt: 0,
+        updatedAt: 0,
+      }
+    )
+      .limit(limit)
+      .skip(skip)
+      .populate("createdBy", "name email")
+      .sort({ createdAt: -1 })
+      .exec();
+
+    return res.status(200).json({
+      message: "Templates fetched",
+      templates,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 const getFileType = (mimeType) => {
   if (mimeType.includes("image")) return "image";
   if (mimeType.includes("video")) return "video";

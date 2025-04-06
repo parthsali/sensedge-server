@@ -263,13 +263,21 @@ export const searchCustomer = async (req, res, next) => {
       return next(createHttpError(400, "Query is required"));
     }
 
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+
+    const skip = (page - 1) * limit;
+
     const customers = await Customer.find({
       $or: [
         { name: { $regex: query, $options: "i" } },
         { phone: { $regex: query, $options: "i" } },
         { company: { $regex: query, $options: "i" } },
       ],
-    });
+    })
+      .populate("assigned_user", "name email")
+      .skip(skip)
+      .limit(limit);
 
     res.status(200).json({
       message: "Customers retrieved successfully",

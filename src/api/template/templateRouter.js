@@ -5,6 +5,7 @@ import {
   getTemplates,
   updateTemplate,
   deleteTemplate,
+  searchTemplate,
   getFileUrl,
   uploadImage,
 } from "./templateController.js";
@@ -17,6 +18,8 @@ const router = express.Router();
 
 router.get("/get-templates", auth, getTemplates);
 router.get("/get-template/:id", auth, getTemplate);
+
+router.get("/search", auth, searchTemplate);
 
 router.post(
   "/create-template",
