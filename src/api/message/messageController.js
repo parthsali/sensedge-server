@@ -73,7 +73,11 @@ export const sendMessage = async (req, res, next) => {
 
       await newMessage.save();
 
-      sendMessageToUser(author, newMessage);
+      const messageData = await Message.findOne({
+        _id: newMessage._id,
+      }).populate("author", "name");
+
+      sendMessageToUser(conversation.user, messageData);
 
       await Conversation.findByIdAndUpdate(conversationId, {
         lastMessage: newMessage._id,
@@ -111,9 +115,13 @@ export const sendMessage = async (req, res, next) => {
 
     await newMessage.save();
 
-    newMessage.url = await getFileSignedUrl(newMessage.url);
+    const messageData = await Message.findOne({
+      _id: newMessage._id,
+    }).populate("author", "name");
 
-    sendMessageToUser(author, newMessage);
+    messageData.url = await getFileSignedUrl(messageData.url);
+
+    sendMessageToUser(conversation.user, messageData);
 
     await Conversation.findByIdAndUpdate(conversationId, {
       lastMessage: newMessage._id,
@@ -768,7 +776,11 @@ export const handleWebhook = async (req, res, next) => {
 
       await newMessage.save();
 
-      sendMessageToUser(conversation.user, newMessage);
+      const messageData = await Message.findOne({
+        _id: newMessage._id,
+      }).populate("author", "name");
+
+      sendMessageToUser(conversation.user, messageData);
 
       conversation.lastMessage = newMessage._id;
       await conversation.save();
