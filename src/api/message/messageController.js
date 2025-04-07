@@ -285,6 +285,12 @@ export const forwardMessage = async (req, res, next) => {
       }
     }
 
+    const messageData = await Message.findOne({
+      _id: newMessage._id,
+    }).populate("author", "name");
+
+    sendMessageToUser(conversation.user, messageData);
+
     return res.status(201).json({ message: newMessage });
   } catch (err) {
     next(err);
@@ -432,6 +438,14 @@ export const sendTemplate = async (req, res, next) => {
         await newMessage.save();
         throw createHttpError(500, "Message not sent");
       }
+
+      const conversation = await Conversation.findById(conversationId);
+
+      const messageData = await Message.findOne({
+        _id: newMessage._id,
+      }).populate("author", "name");
+
+      sendMessageToUser(conversation.user, messageData);
     }
 
     const files = template.files || [];
@@ -487,6 +501,14 @@ export const sendTemplate = async (req, res, next) => {
           throw createHttpError(500, "Message not sent");
         }
       }
+
+      const conversation = await Conversation.findById(conversationId);
+
+      const messageData = await Message.findOne({
+        _id: newMessage._id,
+      }).populate("author", "name");
+
+      sendMessageToUser(conversation.user, messageData);
     }
 
     return res.status(201).json({ message: "Template sent successfully" });
