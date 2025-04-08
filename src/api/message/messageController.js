@@ -871,18 +871,20 @@ export const handleWebhook = async (req, res, next) => {
         }
       }
 
-      console.log("WEBHOOK MESSAGE", newMessage);
+      if (newMessage) {
+        console.log("WEBHOOK MESSAGE", newMessage);
 
-      await newMessage.save();
+        await newMessage.save();
 
-      conversation.lastMessage = newMessage._id;
-      await conversation.save();
+        conversation.lastMessage = newMessage._id;
+        await conversation.save();
 
-      const messageData = await Message.findOne({
-        _id: newMessage._id,
-      }).populate("author", "name");
+        const messageData = await Message.findOne({
+          _id: newMessage._id,
+        }).populate("author", "name");
 
-      sendMessageToUser(conversation.user, messageData);
+        sendMessageToUser(conversation.user, messageData);
+      }
 
       return res
         .status(200)
