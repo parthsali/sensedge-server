@@ -506,6 +506,8 @@ export const sendTemplate = async (req, res, next) => {
     for (let i = 0; i < files.length; i++) {
       const fileData = files[i];
 
+      console.log("File data", fileData);
+
       const newMessage = new Message({
         _id: `message-${nanoid()}`,
         conversation: conversationId,
@@ -518,6 +520,8 @@ export const sendTemplate = async (req, res, next) => {
       });
 
       await newMessage.save();
+
+      console.log("New message", newMessage);
 
       await Conversation.findByIdAndUpdate(conversationId, {
         lastMessage: newMessage._id,
@@ -538,6 +542,7 @@ export const sendTemplate = async (req, res, next) => {
           fileUrl
         );
         if (!response.success) {
+          console.log("Sending image failed", response);
           newMessage.status = "failed";
           await newMessage.save();
 
@@ -558,6 +563,7 @@ export const sendTemplate = async (req, res, next) => {
           fileUrl
         );
         if (!response.success) {
+          console.log("Sending file failed", response);
           newMessage.status = "failed";
           await newMessage.save();
 
@@ -572,6 +578,8 @@ export const sendTemplate = async (req, res, next) => {
           throw createHttpError(500, "Message not sent");
         }
       }
+
+      console.log("File sent successfully", fileData);
 
       const messageData = await Message.findOne({
         _id: newMessage._id,
