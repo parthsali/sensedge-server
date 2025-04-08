@@ -535,7 +535,7 @@ export const sendTemplate = async (req, res, next) => {
 
       const fileUrl = await getFileSignedUrl(newMessage.url);
 
-      if (type === "image") {
+      if (newMessage.type === "image") {
         const response = await sendImage(
           customer.phone,
           newMessage._id,
