@@ -656,6 +656,9 @@ export const handleWebhook = async (req, res, next) => {
 
       let status;
       switch (Number(ack)) {
+        case -1:
+          status = "sent";
+          break;
         case 0:
           status = "pending";
           break;
@@ -715,9 +718,10 @@ export const handleWebhook = async (req, res, next) => {
       let newMessage;
       if (messageDir === "o") {
         if (messageCuid && !messageCuid.startsWith("message")) {
+          console.log("WEBHOOK OUTPUT MESSAGE", messageCuid);
           if (msgType === "text") {
             newMessage = new Message({
-              _id: `message-` + nanoid(),
+              _id: messageCuid,
               conversation: conversation._id,
               type: msgType,
               text: messageText,
@@ -778,7 +782,7 @@ export const handleWebhook = async (req, res, next) => {
             }
 
             newMessage = new Message({
-              _id: `message-${nanoid()}`,
+              _id: messageCuid,
               conversation: conversation._id,
               type: msgType,
               name: fileName,
@@ -866,6 +870,8 @@ export const handleWebhook = async (req, res, next) => {
           });
         }
       }
+
+      console.log("WEBHOOK MESSAGE", newMessage);
 
       await newMessage.save();
 
