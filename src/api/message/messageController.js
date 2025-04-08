@@ -685,7 +685,7 @@ export const handleWebhook = async (req, res, next) => {
 
       const msgType = messageType === "chat" ? "text" : messageType;
 
-      if (!["text", "image", "video", "file"].includes(msgType)) {
+      if (!["text", "image", "video", "file", "media"].includes(msgType)) {
         throw createHttpError(400, "Invalid message type");
       }
 
