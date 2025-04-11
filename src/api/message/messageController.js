@@ -83,22 +83,8 @@ export const sendMessage = async (req, res, next) => {
         newMessage.status = "failed";
         await newMessage.save();
 
-        const messageData = await Message.findOne({
-          _id: newMessage._id,
-        }).populate("author", "name");
-
-        sendMessageToUser(conversation.user, messageData);
-
         throw createHttpError(500, "Message not sent");
       }
-
-      const messageData = await Message.findOne({
-        _id: newMessage._id,
-      }).populate("author", "name");
-
-      sendMessageToUser(conversation.user, messageData);
-
-      return res.status(201).json({ message: newMessage });
     }
 
     const file = req.file;
@@ -140,14 +126,6 @@ export const sendMessage = async (req, res, next) => {
         newMessage.status = "failed";
         await newMessage.save();
 
-        const messageData = await Message.findOne({
-          _id: newMessage._id,
-        }).populate("author", "name");
-
-        messageData.url = await getFileSignedUrl(messageData.url);
-
-        sendMessageToUser(conversation.user, messageData);
-
         throw createHttpError(500, "Message not sent");
       }
     } else {
@@ -155,26 +133,12 @@ export const sendMessage = async (req, res, next) => {
       if (!response.success) {
         newMessage.status = "failed";
         await newMessage.save();
-        const messageData = await Message.findOne({
-          _id: newMessage._id,
-        }).populate("author", "name");
-
-        messageData.url = await getFileSignedUrl(messageData.url);
-
-        sendMessageToUser(conversation.user, messageData);
 
         throw createHttpError(500, "Message not sent");
       }
     }
 
     newMessage.url = fileUrl;
-    const messageData = await Message.findOne({
-      _id: newMessage._id,
-    }).populate("author", "name");
-
-    messageData.url = await getFileSignedUrl(messageData.url);
-
-    sendMessageToUser(conversation.user, messageData);
 
     return res.status(201).json({ message: newMessage });
   } catch (err) {
