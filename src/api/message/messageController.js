@@ -893,6 +893,17 @@ export const handleWebhook = async (req, res, next) => {
       message.status = status;
       await message.save();
 
+      // send event to user
+      const messageData = await Message.findOne({
+        _id: message._id,
+      }).populate("author", "name");
+
+      if (messageData.type !== "text") {
+        messageData.url = await getFileSignedUrl(messageData.url);
+      }
+
+      sendMessageToUser(message.author, messageData, "ack");
+
       return res
         .status(200)
         .json({ success: true, message: "ACK received and status updated" });
@@ -934,10 +945,12 @@ export const handleSSE = async (req, res, next) => {
   }
 };
 
-const sendMessageToUser = (userId, message) => {
+const sendMessageToUser = (userId, message, type = "message") => {
   for (let client of clients) {
     if (client.id.startsWith("admin") || client.id === userId) {
-      client.res.write(`data: ${JSON.stringify(message)}\n\n`);
+      client.res.write(
+        `event: ${type}\ndata: ${JSON.stringify({ userId, message })}\n\n`
+      );
     }
   }
 };
