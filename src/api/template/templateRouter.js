@@ -24,19 +24,17 @@ router.get("/search", auth, searchTemplate);
 router.post(
   "/create-template",
   auth,
-  checkRole("admin"),
   upload.array("files", 10),
   createTemplate
 );
 router.put(
   "/update-template/:id",
   auth,
-  checkRole("admin"),
   upload.array("files", 10),
   updateTemplate
 );
 
-router.delete("/delete-template/:id", auth, checkRole("admin"), deleteTemplate);
+router.delete("/delete-template/:id", auth, deleteTemplate);
 
 router.post("/upload-image", auth, upload.single("file"), uploadImage);
 
