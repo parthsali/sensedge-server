@@ -949,7 +949,7 @@ const sendMessageToUser = (userId, message, type = "message") => {
   for (let client of clients) {
     if (client.id.startsWith("admin") || client.id === userId) {
       client.res.write(
-        `event: ${type}\ndata: ${JSON.stringify({ userId, message })}\n\n`
+        `event: ${type}\ndata: ${JSON.stringify({ event: type, message })}\n\n`
       );
     }
   }
