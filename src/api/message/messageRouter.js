@@ -11,7 +11,6 @@ import {
 } from "./messageController.js";
 import { auth } from "../../middlewares/authMiddleware.js";
 import { upload } from "../../middlewares/multerMiddleware.js";
-import { get } from "mongoose";
 
 const router = express.Router();
 

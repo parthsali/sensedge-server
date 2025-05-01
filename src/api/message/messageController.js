@@ -884,8 +884,8 @@ export const handleSSE = async (req, res, next) => {
 
     const user = req.user;
 
-    const clientId = user._id;
-    const newClient = { id: clientId, res };
+    const clientId = `${user._id}-${nanoid()}`;
+    const newClient = { id: clientId, userId: user._id, res };
     clients.push(newClient);
     console.log(`${clientId} Connected`);
 
@@ -901,7 +901,7 @@ export const handleSSE = async (req, res, next) => {
 
 const sendEventToUser = (userId, message, type = "message") => {
   for (let client of clients) {
-    if (client.id.startsWith("admin") || client.id === userId) {
+    if (client.userId === userId || client.userId.startsWith("admin")) {
       client.res.write(
         `event: ${type}\ndata: ${JSON.stringify({ event: type, message })}\n\n`
       );
