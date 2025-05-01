@@ -64,7 +64,9 @@ export const getUserConversations = async (req, res, next) => {
     }
 
     for (const conversation of conversations) {
-      if (["image", "video", "file"].includes(conversation.lastMessage?.type)) {
+      if (
+        ["image", "video", "file"].includes(conversation?.lastMessage?.type)
+      ) {
         conversation.lastMessage.url = await getFileSignedUrl(
           conversation.lastMessage.url
         );
@@ -83,17 +85,6 @@ export const getConversationMessages = async (req, res, next) => {
 
     if (!conversation) {
       return next(createHttpError(404, "Conversation not found"));
-    }
-
-    if (
-      !conversation.participants.some(
-        (participant) => participant.toString() === req.user._id.toString()
-      ) &&
-      req.user.role !== "admin"
-    ) {
-      return next(
-        createHttpError(403, "You are not allowed to view this conversation")
-      );
     }
 
     const page = parseInt(req.query.page) || 1;
