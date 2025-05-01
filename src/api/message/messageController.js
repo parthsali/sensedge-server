@@ -89,7 +89,9 @@ export const sendMessage = async (req, res, next) => {
 
       const messageData = await Message.findOne({
         _id: newMessage._id,
-      }).populate("author", "name");
+      })
+        .populate("author", "name")
+        .populate("conversation", "conversationType");
 
       const connectedUsers = conversation.participants.filter((participant) =>
         participant.participantId.startsWith("user-")
@@ -146,7 +148,9 @@ export const sendMessage = async (req, res, next) => {
     }
     const messageData = await Message.findOne({
       _id: newMessage._id,
-    }).populate("author", "name");
+    })
+      .populate("author", "name")
+      .populate("conversation", "conversationType");
 
     messageData.url = await getFileSignedUrl(messageData.url);
 
@@ -275,7 +279,9 @@ export const forwardMessage = async (req, res, next) => {
     }
     const messageData = await Message.findOne({
       _id: newMessage._id,
-    }).populate("author", "name");
+    })
+      .populate("author", "name")
+      .populate("conversation", "conversationType");
 
     messageData.url = await getFileSignedUrl(messageData.url);
 
@@ -438,9 +444,9 @@ export const sendTemplate = async (req, res, next) => {
 
       const messageData = await Message.findOne({
         _id: newMessage._id,
-      }).populate("author", "name");
-
-      messageData.url = await getFileSignedUrl(messageData.url);
+      })
+        .populate("author", "name")
+        .populate("conversation", "conversationType");
 
       const connectedUsers = conversation.participants.filter((participant) =>
         participant.participantId.startsWith("user-")
@@ -496,7 +502,9 @@ export const sendTemplate = async (req, res, next) => {
 
       const messageData = await Message.findOne({
         _id: newMessage._id,
-      }).populate("author", "name");
+      })
+        .populate("author", "name")
+        .populate("conversation", "conversationType");
 
       messageData.url = await getFileSignedUrl(messageData.url);
 
