@@ -6,6 +6,7 @@ import Conversation from "../conversation/conversationModel.js";
 import Message from "../message/messageModel.js";
 import Template from "../template/templateModel.js";
 import Config from "../user/configModel.js";
+import { createUserToUserConversation } from "../conversation/conversationUtils.js";
 
 import { deleteFile } from "../../services/awsService.js";
 
@@ -88,7 +89,6 @@ export const createUser = async (req, res, next) => {
 
     const { name, email, employeeId } = req.body;
 
-    // Check if the user already exists
     const user = await User.findOne({ email });
 
     if (user) {
@@ -110,6 +110,17 @@ export const createUser = async (req, res, next) => {
 
     // Send the user details to the user's email
     await sendUserDetailsTemplate(name, email, password);
+
+    const users = await User.find({}, { password: 0 });
+
+    for (const user of users) {
+      if (user._id.toString() === newUser._id.toString()) {
+        continue;
+      }
+      await createUserToUserConversation(newUser._id, user._id);
+    }
+
+    console.log(`User created: ${newUser.email}`);
 
     res.status(201).json({ message: "User created" });
   } catch (error) {

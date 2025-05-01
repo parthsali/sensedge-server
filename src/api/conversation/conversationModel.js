@@ -2,13 +2,23 @@ import mongoose from "mongoose";
 
 const conversationSchema = new mongoose.Schema(
   {
-    customer: {
+    participants: [
+      {
+        participantId: {
+          type: String,
+          required: true,
+        },
+        participantModel: {
+          type: String,
+          enum: ["User", "Customer"],
+          required: true,
+        },
+      },
+    ],
+    conversationType: {
       type: String,
-      ref: "Customer",
-    },
-    user: {
-      type: String,
-      ref: "User",
+      enum: ["user-to-user", "user-to-customer"],
+      required: true,
     },
     unreadCount: {
       type: Number,
@@ -17,7 +27,7 @@ const conversationSchema = new mongoose.Schema(
     lastMessage: {
       type: String,
       ref: "Message",
-      default : null
+      default: null,
     },
   },
   { timestamps: true }

@@ -8,14 +8,15 @@ import { getFileSignedUrl } from "../../services/awsService.js";
 import Config from "../user/configModel.js";
 import Customer from "../customer/customerModel.js";
 import { customAlphabet } from "nanoid";
-import {
-  sendImage,
-  sendText,
-  sendFile,
-} from "../../services/waboxappService.js";
+
 import fetch from "node-fetch";
 import fs from "fs";
 import path from "path";
+import {
+  sendFileMessage,
+  sendImageMessage,
+  sendTextMessage,
+} from "./messageUtils.js";
 
 const nanoid = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 12);
 
@@ -42,7 +43,9 @@ export const sendMessage = async (req, res, next) => {
     }
 
     if (
-      conversation.user.toString() !== req.user._id.toString() &&
+      !conversation.participants.some(
+        (participant) => participant.participantId === req.user._id.toString()
+      ) &&
       user.role !== "admin"
     ) {
       throw createHttpError(
@@ -55,12 +58,6 @@ export const sendMessage = async (req, res, next) => {
 
     if (type === "text") {
       const { text } = req.body;
-
-      const customer = await Customer.findById(conversation.customer);
-
-      if (!customer) {
-        throw createHttpError(404, "Customer not found");
-      }
 
       const newMessage = new Message({
         _id: `message-${nanoid()}`,
@@ -77,16 +74,33 @@ export const sendMessage = async (req, res, next) => {
         lastMessage: newMessage._id,
       });
 
-      const response = await sendText(customer.phone, newMessage._id, text);
+      if (conversation.type === "user-to-customer") {
+        const customerId = conversation.participants.find((participant) =>
+          participant.participantId.startsWith("customer-")
+        )?.participantId;
 
-      if (!response.success) {
-        newMessage.status = "failed";
-        await newMessage.save();
+        const customer = await Customer.findById(customerId);
 
-        throw createHttpError(500, "Message not sent");
+        if (!customer) {
+          throw createHttpError(404, "Customer not found");
+        }
+        await sendTextMessage(newMessage, customer);
       }
 
-      return res.status(201).json({ message: newMessage });
+      const messageData = await Message.findOne({
+        _id: newMessage._id,
+      }).populate("author", "name");
+
+      const connectedUsers = conversation.participants.filter((participant) =>
+        participant.participantId.startsWith("user-")
+      );
+
+      for (const connectedUser of connectedUsers) {
+        const userId = connectedUser.participantId;
+        sendEventToUser(userId, messageData);
+      }
+
+      return res.status(201).json({ message: messageData });
     }
 
     const file = req.file;
@@ -114,35 +128,38 @@ export const sendMessage = async (req, res, next) => {
       lastMessage: newMessage._id,
     });
 
-    const customer = await Customer.findById(conversation.customer);
+    if (conversation.type === "user-to-customer") {
+      const customerId = conversation.participants.find((participant) =>
+        participant.participantId.startsWith("customer-")
+      )?.participantId;
 
-    if (!customer) {
-      throw createHttpError(404, "Customer not found");
-    }
+      const customer = await Customer.findById(customerId);
 
-    const fileUrl = await getFileSignedUrl(newMessage.url);
-
-    if (type === "image") {
-      const response = await sendImage(customer.phone, newMessage._id, fileUrl);
-      if (!response.success) {
-        newMessage.status = "failed";
-        await newMessage.save();
-
-        throw createHttpError(500, "Message not sent");
+      if (!customer) {
+        throw createHttpError(404, "Customer not found");
       }
-    } else {
-      const response = await sendFile(customer.phone, newMessage._id, fileUrl);
-      if (!response.success) {
-        newMessage.status = "failed";
-        await newMessage.save();
-
-        throw createHttpError(500, "Message not sent");
+      if (type === "image") {
+        await sendImageMessage(newMessage, customer);
+      } else {
+        await sendFileMessage(newMessage, customer);
       }
     }
+    const messageData = await Message.findOne({
+      _id: newMessage._id,
+    }).populate("author", "name");
 
-    newMessage.url = fileUrl;
+    messageData.url = await getFileSignedUrl(messageData.url);
 
-    return res.status(201).json({ message: newMessage });
+    const connectedUsers = conversation.participants.filter((participant) =>
+      participant.participantId.startsWith("user-")
+    );
+
+    for (const connectedUser of connectedUsers) {
+      const userId = connectedUser.participantId;
+      sendEventToUser(userId, messageData);
+    }
+
+    return res.status(201).json({ message: messageData });
   } catch (err) {
     next(err);
   }
@@ -206,8 +223,6 @@ export const forwardMessage = async (req, res, next) => {
 
     const user = req.user;
 
-    console.log("Message ID", messageId);
-
     const message = await Message.findById(messageId);
 
     if (!message) {
@@ -239,74 +254,41 @@ export const forwardMessage = async (req, res, next) => {
       throw createHttpError(404, "Conversation not found");
     }
 
-    const customer = await Customer.findById(conversation.customer);
-    if (!customer) {
-      throw createHttpError(404, "Customer not found");
-    }
+    if (conversation.type === "user-to-customer") {
+      const customerId = conversation.participants.find((participant) =>
+        participant.participantId.startsWith("customer-")
+      )?.participantId;
 
-    if (message.type === "text") {
-      const response = await sendText(
-        customer.phone,
-        newMessage._id,
-        message.text
-      );
+      const customer = await Customer.findById(customerId);
 
-      if (!response.success) {
-        newMessage.status = "failed";
-        await newMessage.save();
-
-        const messageData = await Message.findOne({
-          _id: newMessage._id,
-        }).populate("author", "name");
-
-        sendMessageToUser(conversation.user, messageData);
-
-        throw createHttpError(500, "Message not sent");
+      if (!customer) {
+        throw createHttpError(404, "Customer not found");
       }
-    } else if (message.type === "image") {
-      const fileUrl = await getFileSignedUrl(newMessage.url);
-      const response = await sendImage(customer.phone, newMessage._id, fileUrl);
 
-      if (!response.success) {
-        newMessage.status = "failed";
-        await newMessage.save();
-
-        const messageData = await Message.findOne({
-          _id: newMessage._id,
-        }).populate("author", "name");
-
-        messageData.url = await getFileSignedUrl(messageData.url);
-
-        sendMessageToUser(conversation.user, messageData);
-
-        throw createHttpError(500, "Message not sent");
-      }
-    } else {
-      const fileUrl = await getFileSignedUrl(newMessage.url);
-      const response = await sendFile(customer.phone, newMessage._id, fileUrl);
-      if (!response.success) {
-        newMessage.status = "failed";
-        await newMessage.save();
-
-        const messageData = await Message.findOne({
-          _id: newMessage._id,
-        }).populate("author", "name");
-
-        messageData.url = await getFileSignedUrl(messageData.url);
-
-        sendMessageToUser(conversation.user, messageData);
-
-        throw createHttpError(500, "Message not sent");
+      if (message.type === "text") {
+        await sendTextMessage(newMessage, customer);
+      } else if (message.type === "image") {
+        await sendImageMessage(newMessage, customer);
+      } else {
+        await sendFileMessage(newMessage, customer);
       }
     }
-
     const messageData = await Message.findOne({
       _id: newMessage._id,
     }).populate("author", "name");
 
-    sendMessageToUser(conversation.user, messageData);
+    messageData.url = await getFileSignedUrl(messageData.url);
 
-    return res.status(201).json({ message: newMessage });
+    const connectedUsers = conversation.participants.filter((participant) =>
+      participant.participantId.startsWith("user-")
+    );
+
+    for (const connectedUser of connectedUsers) {
+      const userId = connectedUser.participantId;
+      sendEventToUser(userId, messageData);
+    }
+
+    return res.status(201).json({ message: messageData });
   } catch (err) {
     next(err);
   }
@@ -411,9 +393,10 @@ export const sendTemplate = async (req, res, next) => {
 
     const user = req.user;
 
-    // check if the user is allowed to send the template in that conversation or user is admin
     if (
-      conversation.user.toString() !== req.user._id.toString() &&
+      !conversation.participants.some(
+        (participant) => participant.participantId === req.user._id.toString()
+      ) &&
       user.role !== "admin"
     ) {
       throw createHttpError(
@@ -439,40 +422,40 @@ export const sendTemplate = async (req, res, next) => {
         lastMessage: newMessage._id,
       });
 
-      const customer = await Customer.findById(conversation.customer);
+      if (conversation.type === "user-to-customer") {
+        const customerId = conversation.participants.find((participant) =>
+          participant.participantId.startsWith("customer-")
+        )?.participantId;
 
-      if (!customer) {
-        throw createHttpError(404, "Customer not found");
-      }
-      const text = template.text;
+        const customer = await Customer.findById(customerId);
 
-      const response = await sendText(customer.phone, newMessage._id, text);
+        if (!customer) {
+          throw createHttpError(404, "Customer not found");
+        }
 
-      if (!response.success) {
-        newMessage.status = "failed";
-        await newMessage.save();
-
-        const messageData = await Message.findOne({
-          _id: newMessage._id,
-        }).populate("author", "name");
-
-        sendMessageToUser(conversation.user, messageData);
-        throw createHttpError(500, "Message not sent");
+        await sendTextMessage(newMessage, customer);
       }
 
       const messageData = await Message.findOne({
         _id: newMessage._id,
       }).populate("author", "name");
 
-      sendMessageToUser(conversation.user, messageData);
+      messageData.url = await getFileSignedUrl(messageData.url);
+
+      const connectedUsers = conversation.participants.filter((participant) =>
+        participant.participantId.startsWith("user-")
+      );
+
+      for (const connectedUser of connectedUsers) {
+        const userId = connectedUser.participantId;
+        sendEventToUser(userId, messageData);
+      }
     }
 
     const files = template.files || [];
 
     for (let i = 0; i < files.length; i++) {
       const fileData = files[i];
-
-      console.log("File data", fileData);
 
       const newMessage = new Message({
         _id: `message-${nanoid()}`,
@@ -487,65 +470,29 @@ export const sendTemplate = async (req, res, next) => {
 
       await newMessage.save();
 
-      console.log("New message", newMessage);
-
       await Conversation.findByIdAndUpdate(conversationId, {
         lastMessage: newMessage._id,
       });
 
-      const customer = await Customer.findById(conversation.customer);
+      if (conversation.type === "user-to-customer") {
+        const customerId = conversation.participants.find((participant) =>
+          participant.participantId.startsWith("customer-")
+        )?.participantId;
 
-      if (!customer) {
-        throw createHttpError(404, "Customer not found");
-      }
+        const customer = await Customer.findById(customerId);
 
-      const fileUrl = await getFileSignedUrl(newMessage.url);
-
-      if (newMessage.type === "image") {
-        const response = await sendImage(
-          customer.phone,
-          newMessage._id,
-          fileUrl
-        );
-        if (!response.success) {
-          console.log("Sending image failed", response);
-          newMessage.status = "failed";
-          await newMessage.save();
-
-          const messageData = await Message.findOne({
-            _id: newMessage._id,
-          }).populate("author", "name");
-
-          messageData.url = await getFileSignedUrl(messageData.url);
-
-          sendMessageToUser(conversation.user, messageData);
-
-          throw createHttpError(500, "Message not sent");
+        if (!customer) {
+          throw createHttpError(404, "Customer not found");
         }
-      } else {
-        const response = await sendFile(
-          customer.phone,
-          newMessage._id,
-          fileUrl
-        );
-        if (!response.success) {
-          console.log("Sending file failed", response);
-          newMessage.status = "failed";
-          await newMessage.save();
 
-          const messageData = await Message.findOne({
-            _id: newMessage._id,
-          }).populate("author", "name");
-
-          messageData.url = await getFileSignedUrl(messageData.url);
-
-          sendMessageToUser(conversation.user, messageData);
-
-          throw createHttpError(500, "Message not sent");
+        if (fileData.type === "image") {
+          await sendImageMessage(newMessage, customer);
+        } else if (fileData.type === "video") {
+          await sendFileMessage(newMessage, customer);
+        } else {
+          await sendFileMessage(newMessage, customer);
         }
       }
-
-      console.log("File sent successfully", fileData);
 
       const messageData = await Message.findOne({
         _id: newMessage._id,
@@ -553,7 +500,14 @@ export const sendTemplate = async (req, res, next) => {
 
       messageData.url = await getFileSignedUrl(messageData.url);
 
-      sendMessageToUser(conversation.user, messageData);
+      const connectedUsers = conversation.participants.filter((participant) =>
+        participant.participantId.startsWith("user-")
+      );
+
+      for (const connectedUser of connectedUsers) {
+        const userId = connectedUser.participantId;
+        sendEventToUser(userId, messageData);
+      }
     }
 
     return res.status(201).json({ message: "Template sent successfully" });
@@ -945,7 +899,7 @@ export const handleSSE = async (req, res, next) => {
   }
 };
 
-const sendMessageToUser = (userId, message, type = "message") => {
+const sendEventToUser = (userId, message, type = "message") => {
   for (let client of clients) {
     if (client.id.startsWith("admin") || client.id === userId) {
       client.res.write(

@@ -4,20 +4,22 @@ import Message from "../message/messageModel.js";
 import Customer from "../customer/customerModel.js";
 import User from "../user/userModel.js";
 import { getFileSignedUrl } from "../../services/awsService.js";
+import { getConversationsWithPopulatedParticipants } from "./conversationUtils.js";
 
 export const getAllConversations = async (req, res, next) => {
   try {
+    const type = req.query.type || "user-to-customer";
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 50;
     const skip = (page - 1) * limit;
+    const isAdmin = true;
 
-    const conversations = await Conversation.find({}, { createdAt: 0 })
-      .populate("user", "name email")
-      .populate("customer", "name phone company")
-      .populate("lastMessage")
-      .sort({ updatedAt: -1 })
-      .limit(limit)
-      .skip(skip);
+    const conversations = await getConversationsWithPopulatedParticipants(
+      type,
+      limit,
+      skip,
+      isAdmin
+    );
 
     if (!conversations) {
       return next(createHttpError(404, "Conversations not found"));
@@ -35,24 +37,27 @@ export const getAllConversations = async (req, res, next) => {
       .status(200)
       .json({ message: "Conversations fetched successfully", conversations });
   } catch (error) {
+    console.error(error);
     next(createHttpError(500, "Internal server error"));
   }
 };
 
 export const getUserConversations = async (req, res, next) => {
   try {
+    const type = req.query.type || "user-to-customer";
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 50;
     const skip = (page - 1) * limit;
-    const conversations = await Conversation.find(
-      { user: req.user._id },
-      { user: 0, createdAt: 0 }
-    )
-      .populate("customer", "name phone company")
-      .populate("lastMessage")
-      .sort({ updatedAt: -1 })
-      .limit(limit)
-      .skip(skip);
+    const isAdmin = false;
+    const userId = req.user._id;
+
+    const conversations = await getConversationsWithPopulatedParticipants(
+      type,
+      limit,
+      skip,
+      isAdmin,
+      userId
+    );
 
     if (!conversations) {
       return next(createHttpError(404, "Conversations not found"));
@@ -76,14 +81,14 @@ export const getConversationMessages = async (req, res, next) => {
   try {
     const conversation = await Conversation.findById(req.params.id);
 
-    // check if that conversation exists
     if (!conversation) {
       return next(createHttpError(404, "Conversation not found"));
     }
 
-    // check if the user is allowed to view the conversation
     if (
-      conversation.user.toString() !== req.user._id.toString() &&
+      !conversation.participants.some(
+        (participant) => participant.toString() === req.user._id.toString()
+      ) &&
       req.user.role !== "admin"
     ) {
       return next(
@@ -132,7 +137,9 @@ export const getStarredMessages = async (req, res, next) => {
     }
 
     if (
-      conversation.user.toString() !== req.user._id.toString() &&
+      !conversation.participants.some(
+        (participant) => participant.toString() === req.user._id.toString()
+      ) &&
       req.user.role !== "admin"
     ) {
       return next(
@@ -210,8 +217,7 @@ export const reassignConversation = async (req, res, next) => {
       return next(createHttpError(404, "Customer not found"));
     }
 
-    conversation.user = user._id;
-    conversation.customer = customer._id;
+    conversation.participants = [user._id, customer._id];
 
     await conversation.save();
     await customer.save();

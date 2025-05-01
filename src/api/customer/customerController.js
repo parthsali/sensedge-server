@@ -7,6 +7,8 @@ import { customAlphabet } from "nanoid";
 import xlsx from "xlsx";
 import fs from "fs";
 import path from "path";
+import User from "../user/userModel.js";
+import { createUserToCustomerConversation } from "../conversation/conversationUtils.js";
 
 const nanoid = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 12);
 
@@ -26,6 +28,12 @@ export const createCustomer = async (req, res, next) => {
       return next(createHttpError(400, "Customer already exists"));
     }
 
+    const userExists = await User.findById(assigned_user);
+
+    if (!userExists) {
+      return next(createHttpError(400, "User does not exist"));
+    }
+
     const customer = new Customer({
       _id: `customer-${nanoid()}`,
       name,
@@ -36,14 +44,7 @@ export const createCustomer = async (req, res, next) => {
 
     await customer.save();
 
-    // create a conversation for the customer
-    const conversation = new Conversation({
-      customer: customer._id,
-      user: assigned_user,
-      lastMessage: null,
-    });
-
-    await conversation.save();
+    await createUserToCustomerConversation(assigned_user, customer._id);
 
     res.status(201).json({
       message: "Customer created successfully",
@@ -119,21 +120,14 @@ export const createCustomers = async (req, res, next) => {
       return next(createHttpError(400, "No customers to create"));
     }
 
-    // use insertMany to bulk insert customers
     await Customer.insertMany(customers);
 
-    // create a conversation for each customer
-    const conversations = customers.map((customer) => {
-      const conversation = new Conversation({
-        customer: customer._id,
-        user: customer.assigned_user,
-        lastMessage: null,
-      });
-
-      return conversation.save();
-    });
-
-    await Promise.all(conversations);
+    for (const customer of customers) {
+      await createUserToCustomerConversation(
+        customer.assigned_user,
+        customer._id
+      );
+    }
 
     res.status(201).json({
       message: "Customers created successfully",
@@ -179,11 +173,11 @@ export const getCustomers = async (req, res, next) => {
       .skip(skip)
       .limit(limit);
 
-    // return customer with his conversation id
     const customersWithConversations = await Promise.all(
       customers.map(async (customer) => {
         const conversation = await Conversation.findOne({
-          customer: customer._id,
+          "participants.participantId": customer._id,
+          "participants.participantModel": "Customer",
         });
         return {
           ...customer._doc,
@@ -218,6 +212,12 @@ export const updateCustomer = async (req, res, next) => {
 
     if (!customer) {
       return next(createHttpError(404, "Customer not found"));
+    }
+
+    const userExists = await User.findById(assigned_user);
+
+    if (!userExists) {
+      return next(createHttpError(400, "User does not exist"));
     }
 
     customer.name = name;
@@ -296,6 +296,7 @@ export const bulkAdd = async (req, res, next) => {
       return next(createHttpError(400, "Customers should be an array"));
     }
 
+    console.log("Step 1: customers", customers);
     // use insertMany to bulk insert customers
     const result = customers.map((customer) => {
       return {
@@ -308,21 +309,28 @@ export const bulkAdd = async (req, res, next) => {
       };
     });
 
+    console.log("Step 2: result", result);
+
     await Customer.bulkWrite(result);
 
-    const conversations = result.map((customer) => {
-      const conversation = new Conversation({
-        customer: customer?.insertOne?.document?._id,
-        user: customer?.insertOne?.document?.assigned_user,
-        lastMessage: null,
-      });
+    console.log("Step 3: bulkWrite completed", result);
+    for (const customer of result) {
+      console.log("Step 4: customer", customer);
+      const customerId = customer?.insertOne?.document?._id;
+      const assignedUserId = customer?.insertOne?.document?.assigned_user;
 
-      return conversation.save();
-    });
-
-    // create a conversation for each customer
-
-    await Promise.all(conversations);
+      console.log("customerId", customerId);
+      console.log("assignedUserId", assignedUserId);
+      if (customerId && assignedUserId) {
+        console.log(
+          "Creating conversation for customerId",
+          customerId,
+          "and assignedUserId",
+          assignedUserId
+        );
+        await createUserToCustomerConversation(assignedUserId, customerId);
+      }
+    }
 
     res.status(201).json({
       message: "Customers added successfully",
