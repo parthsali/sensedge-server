@@ -111,7 +111,13 @@ export const createUser = async (req, res, next) => {
     // Send the user details to the user's email
     await sendUserDetailsTemplate(name, email, password);
 
-    const users = await User.find({}, { password: 0 });
+    const users = await User.find(
+      {
+        role: "user",
+        isActive: true,
+      },
+      { password: 0 }
+    );
 
     for (const user of users) {
       if (user._id.toString() === newUser._id.toString()) {
