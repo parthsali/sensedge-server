@@ -77,9 +77,9 @@ export const sendMessage = async (req, res, next) => {
 
       console.log("Message sent successfully");
 
-      console.log("Conversation type", conversation.type);
+      console.log("Conversation type", conversation.conversationType);
 
-      if (conversation.type === "user-to-customer") {
+      if (conversation.conversationType === "user-to-customer") {
         const customerId = conversation.participants.find((participant) =>
           participant.participantId.startsWith("customer-")
         )?.participantId;
@@ -142,7 +142,7 @@ export const sendMessage = async (req, res, next) => {
       lastMessage: newMessage._id,
     });
 
-    if (conversation.type === "user-to-customer") {
+    if (conversation.conversationType === "user-to-customer") {
       const customerId = conversation.participants.find((participant) =>
         participant.participantId.startsWith("customer-")
       )?.participantId;
@@ -270,7 +270,7 @@ export const forwardMessage = async (req, res, next) => {
       throw createHttpError(404, "Conversation not found");
     }
 
-    if (conversation.type === "user-to-customer") {
+    if (conversation.conversationType === "user-to-customer") {
       const customerId = conversation.participants.find((participant) =>
         participant.participantId.startsWith("customer-")
       )?.participantId;
@@ -440,7 +440,7 @@ export const sendTemplate = async (req, res, next) => {
         lastMessage: newMessage._id,
       });
 
-      if (conversation.type === "user-to-customer") {
+      if (conversation.conversationType === "user-to-customer") {
         const customerId = conversation.participants.find((participant) =>
           participant.participantId.startsWith("customer-")
         )?.participantId;
@@ -492,7 +492,7 @@ export const sendTemplate = async (req, res, next) => {
         lastMessage: newMessage._id,
       });
 
-      if (conversation.type === "user-to-customer") {
+      if (conversation.conversationType === "user-to-customer") {
         const customerId = conversation.participants.find((participant) =>
           participant.participantId.startsWith("customer-")
         )?.participantId;
