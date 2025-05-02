@@ -17,6 +17,7 @@ import {
   sendImageMessage,
   sendTextMessage,
 } from "./messageUtils.js";
+import { createUserToCustomerConversation } from "../conversation/conversationUtils.js";
 
 const nanoid = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 12);
 
@@ -620,7 +621,7 @@ export const handleWebhook = async (req, res, next) => {
       let customer = await Customer.findOne({ phone: contactUid });
 
       let conversation = await Conversation.findOne({
-        customer: customer?._id,
+        "participants.participantId": customer?._id,
       });
 
       let config = await Config.findOne({});
@@ -630,7 +631,6 @@ export const handleWebhook = async (req, res, next) => {
       }
 
       if (!customer) {
-        // Create a new customer
         customer = new Customer({
           _id: `customer-${nanoid()}`,
           name: contactName,
@@ -640,17 +640,12 @@ export const handleWebhook = async (req, res, next) => {
         });
         await customer.save();
 
-        // Create a new conversation with the new customer
-        conversation = new Conversation({
-          user: config.defaultUser,
-          customer: customer._id,
-          unreadCount: 0,
-          lastMessage: null,
-        });
-        await conversation.save();
+        conversation = await createUserToCustomerConversation(
+          customer.assigned_user,
+          customer._id
+        );
       }
 
-      // Create a new message using the incoming data
       let newMessage;
       if (messageDir === "o") {
         if (messageCuid && !messageCuid.startsWith("message")) {
@@ -817,9 +812,22 @@ export const handleWebhook = async (req, res, next) => {
 
         const messageData = await Message.findOne({
           _id: newMessage._id,
-        }).populate("author", "name");
+        })
+          .populate("author", "name")
+          .populate("conversation", "conversationType");
 
-        sendMessageToUser(conversation.user, messageData);
+        if (messageData.type !== "text") {
+          messageData.url = await getFileSignedUrl(messageData.url);
+        }
+
+        const connectedUsers = conversation.participants.filter((participant) =>
+          participant.participantId.startsWith("user-")
+        );
+
+        for (const connectedUser of connectedUsers) {
+          const userId = connectedUser.participantId;
+          sendEventToUser(userId, messageData);
+        }
       }
 
       return res
