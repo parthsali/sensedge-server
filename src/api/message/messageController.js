@@ -75,17 +75,28 @@ export const sendMessage = async (req, res, next) => {
         lastMessage: newMessage._id,
       });
 
+      console.log("Message sent successfully");
+
+      console.log("Conversation type", conversation.type);
+
       if (conversation.type === "user-to-customer") {
         const customerId = conversation.participants.find((participant) =>
           participant.participantId.startsWith("customer-")
         )?.participantId;
 
+        console.log("Customer ID", customerId);
+
         const customer = await Customer.findById(customerId);
+
+        console.log("Customer", customer);
 
         if (!customer) {
           throw createHttpError(404, "Customer not found");
         }
+
         await sendTextMessage(newMessage, customer);
+
+        console.log("Text message sent to customer successfully");
       }
 
       const messageData = await Message.findOne({

@@ -10,7 +10,16 @@ export const sendTextMessage = async (message, customer) => {
     const phone = customer.phone;
     const message_id = message._id;
     const text = message.text;
+
+    console.log("Sending text message:", {
+      phone,
+      message_id,
+      text,
+    });
+
     const response = await sendText(phone, message_id, text);
+
+    console.log("Response from Waboxapp:", response);
 
     if (!response.success) {
       message.status = "failed";
