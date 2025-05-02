@@ -874,16 +874,32 @@ export const handleWebhook = async (req, res, next) => {
       message.status = status;
       await message.save();
 
-      // send event to user
+      const conversation = await Conversation.findOne({
+        _id: message.conversation,
+      });
+
+      if (!conversation) {
+        throw createHttpError(404, "Conversation not found");
+      }
+
       const messageData = await Message.findOne({
         _id: message._id,
-      }).populate("author", "name");
+      })
+        .populate("author", "name")
+        .populate("conversation", "conversationType");
 
       if (messageData.type !== "text") {
         messageData.url = await getFileSignedUrl(messageData.url);
       }
 
-      sendMessageToUser(message.author, messageData, "ack");
+      const connectedUsers = conversation.participants.filter((participant) =>
+        participant.participantId.startsWith("user-")
+      );
+
+      for (const connectedUser of connectedUsers) {
+        const userId = connectedUser.participantId;
+        sendEventToUser(userId, messageData, "ack");
+      }
 
       return res
         .status(200)
