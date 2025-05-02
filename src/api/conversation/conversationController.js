@@ -48,8 +48,15 @@ export const getUserConversations = async (req, res, next) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 50;
     const skip = (page - 1) * limit;
-    const isAdmin = false;
     const userId = req.user._id;
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return next(createHttpError(404, "User not found"));
+    }
+
+    const isAdmin = user.role === "admin";
 
     const conversations = await getConversationsWithPopulatedParticipants(
       type,
