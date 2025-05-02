@@ -113,7 +113,6 @@ export const createUser = async (req, res, next) => {
 
     const users = await User.find(
       {
-        role: "user",
         isActive: true,
       },
       { password: 0 }

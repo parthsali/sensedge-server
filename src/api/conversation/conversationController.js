@@ -56,7 +56,7 @@ export const getUserConversations = async (req, res, next) => {
       return next(createHttpError(404, "User not found"));
     }
 
-    const isAdmin = user.role === "admin";
+    const isAdmin = false;
 
     const conversations = await getConversationsWithPopulatedParticipants(
       type,
