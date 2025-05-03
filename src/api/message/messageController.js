@@ -96,8 +96,6 @@ export const sendMessage = async (req, res, next) => {
         }
 
         await sendTextMessage(newMessage, customer);
-
-        console.log("Text message sent to customer successfully");
       }
 
       const messageData = await Message.findOne({
@@ -108,12 +106,18 @@ export const sendMessage = async (req, res, next) => {
 
       const connectedUsers = conversation.participants.filter(
         (participant) =>
-          participant.participantId.startsWith("user-") ||
-          participant.participantId.startsWith("admin-")
+          (participant.participantId.startsWith("user-") ||
+            participant.participantId.startsWith("admin-")) &&
+          participant.participantId !== messageData.author._id.toString()
       );
+
+      console.log("Connected users", connectedUsers);
 
       const sendToAdmin = conversation.conversationType === "user-to-customer";
 
+      if (sendToAdmin) {
+        sendEventToUser("", messageData, "message", sendToAdmin);
+      }
       for (const connectedUser of connectedUsers) {
         const userId = connectedUser.participantId;
         sendEventToUser(userId, messageData, "message", sendToAdmin);
@@ -163,6 +167,9 @@ export const sendMessage = async (req, res, next) => {
         await sendFileMessage(newMessage, customer);
       }
     }
+
+    console.log("File message sent successfully");
+
     const messageData = await Message.findOne({
       _id: newMessage._id,
     })
@@ -171,11 +178,18 @@ export const sendMessage = async (req, res, next) => {
 
     messageData.url = await getFileSignedUrl(messageData.url);
 
-    const connectedUsers = conversation.participants.filter((participant) =>
-      participant.participantId.startsWith("user-")
+    const connectedUsers = conversation.participants.filter(
+      (participant) =>
+        (participant.participantId.startsWith("user-") ||
+          participant.participantId.startsWith("admin-")) &&
+        participant.participantId !== messageData.author._id.toString()
     );
 
     const sendToAdmin = conversation.conversationType === "user-to-customer";
+
+    if (sendToAdmin) {
+      sendEventToUser("", messageData, "message", sendToAdmin);
+    }
 
     for (const connectedUser of connectedUsers) {
       const userId = connectedUser.participantId;
@@ -1034,6 +1048,7 @@ const sendEventToUser = (
   sendToAdmin = true
 ) => {
   for (let client of clients) {
+    console.log("Client ID", client.id, "User ID", client.userId);
     if (
       (sendToAdmin && client.userId.startsWith("admin")) ||
       client.userId === userId
