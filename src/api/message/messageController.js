@@ -110,9 +110,11 @@ export const sendMessage = async (req, res, next) => {
         participant.participantId.startsWith("user-")
       );
 
+      const sendToAdmin = conversation.conversationType === "user-to-customer";
+
       for (const connectedUser of connectedUsers) {
         const userId = connectedUser.participantId;
-        sendEventToUser(userId, messageData);
+        sendEventToUser(userId, messageData, "message", sendToAdmin);
       }
 
       return res.status(201).json({ message: messageData });
@@ -171,9 +173,11 @@ export const sendMessage = async (req, res, next) => {
       participant.participantId.startsWith("user-")
     );
 
+    const sendToAdmin = conversation.conversationType === "user-to-customer";
+
     for (const connectedUser of connectedUsers) {
       const userId = connectedUser.participantId;
-      sendEventToUser(userId, messageData);
+      sendEventToUser(userId, messageData, "message", sendToAdmin);
     }
 
     return res.status(201).json({ message: messageData });
@@ -274,9 +278,11 @@ export const updateStatus = async (req, res, next) => {
       participant.participantId.startsWith("user-")
     );
 
+    const sendToAdmin = conversation.conversationType === "user-to-customer";
+
     for (const connectedUser of connectedUsers) {
       const userId = connectedUser.participantId;
-      sendEventToUser(userId, messageData, "ack");
+      sendEventToUser(userId, messageData, "ack", sendToAdmin);
     }
 
     return res.status(200).json({ message: "Message status updated" });
@@ -362,9 +368,11 @@ export const forwardMessage = async (req, res, next) => {
       participant.participantId.startsWith("user-")
     );
 
+    const sendToAdmin = conversation.conversationType === "user-to-customer";
+
     for (const connectedUser of connectedUsers) {
       const userId = connectedUser.participantId;
-      sendEventToUser(userId, messageData);
+      sendEventToUser(userId, messageData, "message", sendToAdmin);
     }
 
     return res.status(201).json({ message: messageData });
@@ -525,9 +533,11 @@ export const sendTemplate = async (req, res, next) => {
         participant.participantId.startsWith("user-")
       );
 
+      const sendToAdmin = conversation.conversationType === "user-to-customer";
+
       for (const connectedUser of connectedUsers) {
         const userId = connectedUser.participantId;
-        sendEventToUser(userId, messageData);
+        sendEventToUser(userId, messageData, "message", sendToAdmin);
       }
     }
 
@@ -585,9 +595,11 @@ export const sendTemplate = async (req, res, next) => {
         participant.participantId.startsWith("user-")
       );
 
+      const sendToAdmin = conversation.conversationType === "user-to-customer";
+
       for (const connectedUser of connectedUsers) {
         const userId = connectedUser.participantId;
-        sendEventToUser(userId, messageData);
+        sendEventToUser(userId, messageData, "message", sendToAdmin);
       }
     }
 
@@ -1003,9 +1015,17 @@ export const handleSSE = async (req, res, next) => {
   }
 };
 
-const sendEventToUser = (userId, message, type = "message") => {
+const sendEventToUser = (
+  userId,
+  message,
+  type = "message",
+  sendToAdmin = true
+) => {
   for (let client of clients) {
-    if (client.userId === userId || client.userId.startsWith("admin")) {
+    if (
+      (sendToAdmin && client.userId.startsWith("admin")) ||
+      client.userId === userId
+    ) {
       client.res.write(
         `event: ${type}\ndata: ${JSON.stringify({ event: type, message })}\n\n`
       );
