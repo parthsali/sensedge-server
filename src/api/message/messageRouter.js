@@ -5,6 +5,7 @@ import {
   sendTemplate,
   searchMessage,
   handleWebhook,
+  updateStatus,
   updateStarredMessage,
   forwardMessage,
   handleSSE,
@@ -17,6 +18,8 @@ const router = express.Router();
 router.post("/send-message", auth, upload.single("file"), sendMessage);
 
 router.patch("/update-starred-status/:id", auth, updateStarredMessage);
+
+router.patch("/update-status/:id", auth, updateStatus);
 
 router.post("/forward-message", auth, forwardMessage);
 

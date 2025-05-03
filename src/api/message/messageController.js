@@ -18,6 +18,7 @@ import {
   sendTextMessage,
 } from "./messageUtils.js";
 import { createUserToCustomerConversation } from "../conversation/conversationUtils.js";
+import { on } from "events";
 
 const nanoid = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 12);
 
@@ -220,6 +221,65 @@ export const updateStarredMessage = async (req, res, next) => {
     console.log("Message starred status updated", message);
 
     return res.status(200).json({ message: "Message starred status updated" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const updateStatus = async (req, res, next) => {
+  try {
+    const { id: messageId } = req.params;
+
+    const { status } = req.body;
+
+    if (!messageId) {
+      throw createHttpError(400, "Message ID is required");
+    }
+
+    if (!status) {
+      throw createHttpError(400, "Status is required");
+    }
+
+    if (!["sent", "delivered", "read", "failed"].includes(status)) {
+      throw createHttpError(400, "Invalid status value");
+    }
+
+    const message = await Message.findById(messageId);
+
+    if (!message) {
+      throw createHttpError(404, "Message not found");
+    }
+
+    message.status = status;
+
+    await message.save();
+
+    const messageData = await Message.findOne({
+      _id: message._id,
+    })
+      .populate("author", "name")
+      .populate("conversation", "conversationType");
+
+    if (messageData.type !== "text") {
+      messageData.url = await getFileSignedUrl(messageData.url);
+    }
+
+    const conversation = await Conversation.findById(message.conversation);
+
+    if (!conversation) {
+      throw createHttpError(404, "Conversation not found");
+    }
+
+    const connectedUsers = conversation.participants.filter((participant) =>
+      participant.participantId.startsWith("user-")
+    );
+
+    for (const connectedUser of connectedUsers) {
+      const userId = connectedUser.participantId;
+      sendEventToUser(userId, messageData, "ack");
+    }
+
+    return res.status(200).json({ message: "Message status updated" });
   } catch (err) {
     next(err);
   }
