@@ -295,8 +295,9 @@ export const forwardMessage = async (req, res, next) => {
       .populate("author", "name")
       .populate("conversation", "conversationType");
 
-    messageData.url = await getFileSignedUrl(messageData.url);
-
+    if (messageData.type !== "text") {
+      messageData.url = await getFileSignedUrl(messageData.url);
+    }
     const connectedUsers = conversation.participants.filter((participant) =>
       participant.participantId.startsWith("user-")
     );
