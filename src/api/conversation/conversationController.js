@@ -239,24 +239,34 @@ export const searchConversation = async (req, res, next) => {
 
     const skip = (page - 1) * limit;
 
-    const conversations = await Conversation.find({}, { createdAt: 0 })
-      .limit(limit)
-      .skip(skip)
-      .populate("user", "name email")
-      .populate("customer", "name phone company")
-      .populate("lastMessage")
-      .sort({ updatedAt: -1 })
-      .exec();
+    const userId = req.user._id;
+    const isAdmin = req.user.role === "admin";
+    const type = req.query.type || "user-to-customer";
+
+    const conversations = await getConversationsWithPopulatedParticipants(
+      type,
+      limit,
+      skip,
+      isAdmin,
+      userId
+    );
+
+    if (!conversations) {
+      return next(createHttpError(404, "Conversations not found"));
+    }
 
     const filteredConversations = conversations.filter((conversation) => {
       return (
-        conversation.customer?.name
-          ?.toLowerCase()
-          .includes(query.toLowerCase()) ||
-        conversation.customer?.phone?.includes(query) ||
-        conversation.customer?.company
-          ?.toLowerCase()
-          .includes(query.toLowerCase()) ||
+        conversation.participants.some((participant) => {
+          if (participant._id.toString() === req.user._id.toString()) {
+            return false;
+          }
+          return (
+            participant.name?.toLowerCase().includes(query.toLowerCase()) ||
+            participant.phone?.includes(query) ||
+            participant.company?.toLowerCase().includes(query.toLowerCase())
+          );
+        }) ||
         conversation.lastMessage?.text
           ?.toLowerCase()
           .includes(query.toLowerCase()) ||
@@ -266,19 +276,21 @@ export const searchConversation = async (req, res, next) => {
       );
     });
 
-    filteredConversations.forEach((conversation) => {
+    console.log("Filtered conversations:", filteredConversations);
+
+    for (const conversation of filteredConversations) {
       if (["image", "video", "file"].includes(conversation.lastMessage?.type)) {
-        conversation.lastMessage.url = getFileSignedUrl(
+        conversation.lastMessage.url = await getFileSignedUrl(
           conversation.lastMessage.url
         );
       }
-    });
+    }
 
     res.status(200).json({
       message: "Conversations fetched successfully",
       conversations: filteredConversations,
     });
   } catch (error) {
-    next(createHttpError(500, "Internal server error"));
+    next(createHttpError(500, error));
   }
 };
