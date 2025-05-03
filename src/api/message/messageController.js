@@ -187,7 +187,7 @@ export const sendMessage = async (req, res, next) => {
 
     const sendToAdmin = conversation.conversationType === "user-to-customer";
 
-    if (sendToAdmin) {
+    if (sendToAdmin && !messageData.author._id.toString().startsWith("admin")) {
       sendEventToUser("", messageData, "message", sendToAdmin);
     }
 
