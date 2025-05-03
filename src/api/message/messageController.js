@@ -106,8 +106,10 @@ export const sendMessage = async (req, res, next) => {
         .populate("author", "name")
         .populate("conversation", "conversationType");
 
-      const connectedUsers = conversation.participants.filter((participant) =>
-        participant.participantId.startsWith("user-")
+      const connectedUsers = conversation.participants.filter(
+        (participant) =>
+          participant.participantId.startsWith("user-") ||
+          participant.participantId.startsWith("admin-")
       );
 
       const sendToAdmin = conversation.conversationType === "user-to-customer";
@@ -274,11 +276,15 @@ export const updateStatus = async (req, res, next) => {
       throw createHttpError(404, "Conversation not found");
     }
 
-    const connectedUsers = conversation.participants.filter((participant) =>
-      participant.participantId.startsWith("user-")
+    const connectedUsers = conversation.participants.filter(
+      (participant) =>
+        participant.participantId.startsWith("user-") ||
+        participant.participantId.startsWith("admin-")
     );
 
     const sendToAdmin = conversation.conversationType === "user-to-customer";
+
+    console.log("Connected users", connectedUsers);
 
     for (const connectedUser of connectedUsers) {
       const userId = connectedUser.participantId;
@@ -364,8 +370,10 @@ export const forwardMessage = async (req, res, next) => {
     if (messageData.type !== "text") {
       messageData.url = await getFileSignedUrl(messageData.url);
     }
-    const connectedUsers = conversation.participants.filter((participant) =>
-      participant.participantId.startsWith("user-")
+    const connectedUsers = conversation.participants.filter(
+      (participant) =>
+        participant.participantId.startsWith("user-") ||
+        participant.participantId.startsWith("admin-")
     );
 
     const sendToAdmin = conversation.conversationType === "user-to-customer";
@@ -529,8 +537,10 @@ export const sendTemplate = async (req, res, next) => {
         .populate("author", "name")
         .populate("conversation", "conversationType");
 
-      const connectedUsers = conversation.participants.filter((participant) =>
-        participant.participantId.startsWith("user-")
+      const connectedUsers = conversation.participants.filter(
+        (participant) =>
+          participant.participantId.startsWith("user-") ||
+          participant.participantId.startsWith("admin-")
       );
 
       const sendToAdmin = conversation.conversationType === "user-to-customer";
@@ -591,8 +601,10 @@ export const sendTemplate = async (req, res, next) => {
 
       messageData.url = await getFileSignedUrl(messageData.url);
 
-      const connectedUsers = conversation.participants.filter((participant) =>
-        participant.participantId.startsWith("user-")
+      const connectedUsers = conversation.participants.filter(
+        (participant) =>
+          participant.participantId.startsWith("user-") ||
+          participant.participantId.startsWith("admin-")
       );
 
       const sendToAdmin = conversation.conversationType === "user-to-customer";
@@ -1026,6 +1038,7 @@ const sendEventToUser = (
       (sendToAdmin && client.userId.startsWith("admin")) ||
       client.userId === userId
     ) {
+      console.log("Sending event to client", client.userId, type);
       client.res.write(
         `event: ${type}\ndata: ${JSON.stringify({ event: type, message })}\n\n`
       );
