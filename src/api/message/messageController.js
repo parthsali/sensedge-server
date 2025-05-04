@@ -299,6 +299,16 @@ export const updateStatus = async (req, res, next) => {
       throw createHttpError(404, "Conversation not found");
     }
 
+    if (
+      conversation.conversationType === "user-to-customer" &&
+      userId.startsWith("admin-")
+    ) {
+      return res.status(200).json({
+        message: "Message status updated",
+        messageData,
+      });
+    }
+
     await decrementUnreadCount(conversation._id, userId);
 
     const connectedUsers = conversation.participants.filter(
