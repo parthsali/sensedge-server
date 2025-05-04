@@ -28,10 +28,19 @@ export const createCustomer = async (req, res, next) => {
       return next(createHttpError(400, "Customer already exists"));
     }
 
-    const userExists = await User.findById(assigned_user);
+    let userToAssign = assigned_user;
 
-    if (!userExists) {
-      return next(createHttpError(400, "User does not exist"));
+    if (!userToAssign) {
+      const config = await Config.findOne();
+      if (!config || !config.defaultUser) {
+        return next(createHttpError(500, "Default user not found"));
+      }
+      userToAssign = config.defaultUser;
+    } else {
+      const userExists = await User.findById(userToAssign);
+      if (!userExists) {
+        return next(createHttpError(400, "User does not exist"));
+      }
     }
 
     const customer = new Customer({
@@ -39,7 +48,7 @@ export const createCustomer = async (req, res, next) => {
       name,
       phone,
       company,
-      assigned_user,
+      assigned_user: userToAssign,
     });
 
     await customer.save();
