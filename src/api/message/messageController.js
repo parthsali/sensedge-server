@@ -125,7 +125,10 @@ export const sendMessage = async (req, res, next) => {
 
       for (const connectedUser of connectedUsers) {
         const userId = connectedUser.participantId;
-        await incrementUnreadCount(conversationId, userId);
+        console.log("Calling incrementUnreadCount for user", userId);
+        if (conversation.conversationType === "user-to-user") {
+          await incrementUnreadCount(conversationId, userId);
+        }
         sendEventToUser(userId, messageData, "message", sendToAdmin);
       }
 
