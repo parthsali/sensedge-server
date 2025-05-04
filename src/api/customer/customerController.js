@@ -53,7 +53,10 @@ export const createCustomer = async (req, res, next) => {
 
     await customer.save();
 
-    await createUserToCustomerConversation(assigned_user, customer._id);
+    await createUserToCustomerConversation(
+      customer.assigned_user,
+      customer._id
+    );
 
     res.status(201).json({
       message: "Customer created successfully",
