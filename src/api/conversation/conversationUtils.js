@@ -117,21 +117,16 @@ export const getConversationsWithPopulatedParticipants = async (
         conversation.participants = populatedParticipants.filter(
           (p) => p !== null
         );
-
-        // Calculate unreadCount for the requesting user
-        const requestingParticipant = conversation.participants.find(
-          (p) => p._id === userId
-        );
-        if (requestingParticipant) {
-          const participantData = conversation.participants.find(
-            (p) => p._id === userId
+        if (conversation.conversationType === "user-to-user") {
+          const userParticipant = conversation.participants.find(
+            (participant) => participant._id === userId
           );
-
-          conversation.unreadCount = participantData
-            ? conversation.participants.find(
-                (participant) => participant._id === userId
-              )?.unreadCount || 0
-            : 0;
+          conversation.unreadCount = userParticipant?.unreadCount || 0;
+        } else if (conversation.conversationType === "user-to-customer") {
+          const userParticipant = conversation.participants.find(
+            (participant) => participant._id.startsWith("user")
+          );
+          conversation.unreadCount = userParticipant?.unreadCount || 0;
         } else {
           conversation.unreadCount = 0;
         }
