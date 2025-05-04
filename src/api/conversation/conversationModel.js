@@ -13,16 +13,16 @@ const conversationSchema = new mongoose.Schema(
           enum: ["User", "Customer"],
           required: true,
         },
+        unreadCount: {
+          type: Number,
+          default: 0,
+        },
       },
     ],
     conversationType: {
       type: String,
       enum: ["user-to-user", "user-to-customer"],
       required: true,
-    },
-    unreadCount: {
-      type: Number,
-      default: 0,
     },
     lastMessage: {
       type: String,

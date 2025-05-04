@@ -97,7 +97,13 @@ export const getConversationsWithPopulatedParticipants = async (
                 .lean()
                 .exec();
 
-              return participantDoc;
+              return participantDoc
+                ? {
+                    ...participantDoc,
+                    _id: participant.participantId,
+                    unreadCount: participant.unreadCount || 0,
+                  }
+                : null;
             } catch (error) {
               console.error(
                 `Error populating participant ${participant.participantId} (Model: ${participant.participantModel}):`,
@@ -112,6 +118,24 @@ export const getConversationsWithPopulatedParticipants = async (
           (p) => p !== null
         );
 
+        // Calculate unreadCount for the requesting user
+        const requestingParticipant = conversation.participants.find(
+          (p) => p._id === userId
+        );
+        if (requestingParticipant) {
+          const participantData = conversation.participants.find(
+            (p) => p._id === userId
+          );
+
+          conversation.unreadCount = participantData
+            ? conversation.participants.find(
+                (participant) => participant._id === userId
+              )?.unreadCount || 0
+            : 0;
+        } else {
+          conversation.unreadCount = 0;
+        }
+
         return conversation;
       })
     );
@@ -119,6 +143,46 @@ export const getConversationsWithPopulatedParticipants = async (
     return populatedConversations;
   } catch (error) {
     console.error("Error in getConversationsWithPopulatedParticipants:", error);
+    throw error;
+  }
+};
+
+export const incrementUnreadCount = async (conversationId, userId) => {
+  try {
+    const conversation = await Conversation.findOneAndUpdate(
+      {
+        _id: conversationId,
+        "participants.participantId": userId,
+      },
+      {
+        $inc: { "participants.$.unreadCount": 1 },
+      },
+      { new: true }
+    ).lean();
+
+    return conversation;
+  } catch (error) {
+    console.error("Error incrementing unread count:", error);
+    throw error;
+  }
+};
+
+export const decrementUnreadCount = async (conversationId, userId) => {
+  try {
+    const conversation = await Conversation.findOneAndUpdate(
+      {
+        _id: conversationId,
+        "participants.participantId": userId,
+      },
+      {
+        $inc: { "participants.$.unreadCount": -1 },
+      },
+      { new: true }
+    ).lean();
+
+    return conversation;
+  } catch (error) {
+    console.error("Error decrementing unread count:", error);
     throw error;
   }
 };

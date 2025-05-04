@@ -17,7 +17,11 @@ import {
   sendImageMessage,
   sendTextMessage,
 } from "./messageUtils.js";
-import { createUserToCustomerConversation } from "../conversation/conversationUtils.js";
+import {
+  createUserToCustomerConversation,
+  decrementUnreadCount,
+  incrementUnreadCount,
+} from "../conversation/conversationUtils.js";
 import { on } from "events";
 
 const nanoid = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 12);
@@ -106,9 +110,9 @@ export const sendMessage = async (req, res, next) => {
 
       const connectedUsers = conversation.participants.filter(
         (participant) =>
+          participant.participantId !== messageData.author._id.toString() &&
           (participant.participantId.startsWith("user-") ||
-            participant.participantId.startsWith("admin-")) &&
-          participant.participantId !== messageData.author._id.toString()
+            participant.participantId.startsWith("admin-"))
       );
 
       console.log("Connected users", connectedUsers);
@@ -118,8 +122,10 @@ export const sendMessage = async (req, res, next) => {
       if (sendToAdmin) {
         sendEventToUser("", messageData, "message", sendToAdmin);
       }
+
       for (const connectedUser of connectedUsers) {
         const userId = connectedUser.participantId;
+        await incrementUnreadCount(conversationId, userId);
         sendEventToUser(userId, messageData, "message", sendToAdmin);
       }
 
@@ -193,6 +199,7 @@ export const sendMessage = async (req, res, next) => {
 
     for (const connectedUser of connectedUsers) {
       const userId = connectedUser.participantId;
+      await incrementUnreadCount(conversationId, userId);
       sendEventToUser(userId, messageData, "message", sendToAdmin);
     }
 
@@ -264,6 +271,8 @@ export const updateStatus = async (req, res, next) => {
       throw createHttpError(400, "Invalid status value");
     }
 
+    const userId = req.user._id;
+
     const message = await Message.findById(messageId);
 
     if (!message) {
@@ -290,6 +299,8 @@ export const updateStatus = async (req, res, next) => {
       throw createHttpError(404, "Conversation not found");
     }
 
+    await decrementUnreadCount(conversation._id, userId);
+
     const connectedUsers = conversation.participants.filter(
       (participant) =>
         participant.participantId.startsWith("user-") ||
@@ -297,8 +308,6 @@ export const updateStatus = async (req, res, next) => {
     );
 
     const sendToAdmin = conversation.conversationType === "user-to-customer";
-
-    console.log("Connected users", connectedUsers);
 
     for (const connectedUser of connectedUsers) {
       const userId = connectedUser.participantId;
@@ -394,6 +403,7 @@ export const forwardMessage = async (req, res, next) => {
 
     for (const connectedUser of connectedUsers) {
       const userId = connectedUser.participantId;
+      await incrementUnreadCount(conversationId, userId);
       sendEventToUser(userId, messageData, "message", sendToAdmin);
     }
 
@@ -561,6 +571,7 @@ export const sendTemplate = async (req, res, next) => {
 
       for (const connectedUser of connectedUsers) {
         const userId = connectedUser.participantId;
+        await incrementUnreadCount(conversationId, userId);
         sendEventToUser(userId, messageData, "message", sendToAdmin);
       }
     }
@@ -625,6 +636,7 @@ export const sendTemplate = async (req, res, next) => {
 
       for (const connectedUser of connectedUsers) {
         const userId = connectedUser.participantId;
+        await incrementUnreadCount(conversationId, userId);
         sendEventToUser(userId, messageData, "message", sendToAdmin);
       }
     }
@@ -936,6 +948,7 @@ export const handleWebhook = async (req, res, next) => {
 
         for (const connectedUser of connectedUsers) {
           const userId = connectedUser.participantId;
+          await incrementUnreadCount(conversation._id, userId);
           sendEventToUser(userId, messageData);
         }
       }

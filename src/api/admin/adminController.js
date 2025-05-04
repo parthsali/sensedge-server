@@ -143,6 +143,33 @@ export const deleteUser = async (req, res, next) => {
 
     const user = await User.findByIdAndDelete(id);
 
+    // delete all conversations of the user
+    const userId = user._id.toString();
+    await Conversation.deleteMany({
+      participants: {
+        $elemMatch: {
+          participantId: userId,
+          participantModel: "User",
+        },
+      },
+    });
+
+    // delete all messages of the user
+    await Message.deleteMany({
+      author: userId,
+    });
+
+    // delete all templates of the user
+    const templates = await Template.find({ createdBy: userId });
+
+    for (const template of templates) {
+      const files = template.files || [];
+      for (const file of files) {
+        await deleteFile(file.url);
+      }
+    }
+    await Template.deleteMany({ createdBy: userId });
+
     if (!user) {
       return next(createHttpError(404, "User not found"));
     }
@@ -230,6 +257,30 @@ export const createAdmin = async (req, res, next) => {
 
 export const deleteUsers = async (req, res, next) => {
   try {
+    const users = await User.find({ role: "user" });
+
+    for (const user of users) {
+      // delete all conversations of the user
+      const userId = user._id.toString();
+      await Conversation.deleteMany({
+        participants: {
+          $elemMatch: {
+            participantId: userId,
+            participantModel: "User",
+          },
+        },
+      });
+
+      // delete all messages of the user
+      await Message.deleteMany({
+        author: user._id,
+      });
+
+      // delete all templates of the user
+
+      await Template.deleteMany({ createdBy: userId });
+    }
+
     await User.deleteMany({ role: "user" });
 
     res.status(200).json({ message: "Users deleted" });

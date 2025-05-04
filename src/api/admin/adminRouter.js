@@ -13,6 +13,7 @@ import {
   deleteMessages,
   deleteTemplates,
   deleteConfig,
+  deleteUser,
 } from "./adminController.js";
 import { checkRole } from "../../middlewares/roleMiddleware.js";
 import { auth } from "../../middlewares/authMiddleware.js";
@@ -32,6 +33,7 @@ router.put("/users/deactivate/:id", auth, checkRole("admin"), deactivateUser);
 router.put("/users/reactivate/:id", auth, checkRole("admin"), reactivateUser);
 
 // for dev
+router.delete("/users/:id", auth, checkRole("admin"), deleteUser);
 router.delete("/users", auth, checkRole("admin"), deleteUsers);
 router.delete("/customers", auth, checkRole("admin"), deleteCustomers);
 router.delete("/", auth, checkRole("admin"), deleteAdmins);
