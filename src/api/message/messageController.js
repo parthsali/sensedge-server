@@ -734,26 +734,7 @@ export const handleWebhook = async (req, res, next) => {
         size: messageSize,
       } = body;
 
-      let status;
-      switch (Number(ack)) {
-        case -1:
-          status = "sent";
-          break;
-        case 0:
-          status = "pending";
-          break;
-        case 1:
-          status = "sent";
-          break;
-        case 2:
-          status = "delivered";
-          break;
-        case 3:
-          status = "read";
-          break;
-        default:
-          status = "failed";
-      }
+      let status = "delivered";
 
       const msgType = messageType === "chat" ? "text" : messageType;
 
