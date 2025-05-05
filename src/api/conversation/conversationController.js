@@ -4,7 +4,10 @@ import Message from "../message/messageModel.js";
 import Customer from "../customer/customerModel.js";
 import User from "../user/userModel.js";
 import { getFileSignedUrl } from "../../services/awsService.js";
-import { getConversationsWithPopulatedParticipants } from "./conversationUtils.js";
+import {
+  getConversationsWithPopulatedParticipants,
+  updateUserToCustomerConversation,
+} from "./conversationUtils.js";
 
 export const getAllConversations = async (req, res, next) => {
   try {
@@ -215,10 +218,11 @@ export const reassignConversation = async (req, res, next) => {
       return next(createHttpError(404, "Customer not found"));
     }
 
-    conversation.participants = [user._id, customer._id];
-
-    await conversation.save();
-    await customer.save();
+    await updateUserToCustomerConversation(
+      user._id,
+      customer._id,
+      conversationId
+    );
 
     res.status(200).json({ message: "Conversation reassigned successfully" });
   } catch (error) {

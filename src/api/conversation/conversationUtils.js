@@ -35,6 +35,32 @@ export const createUserToCustomerConversation = async (userId, customerId) => {
   }
 };
 
+export const updateUserToCustomerConversation = async (
+  userId,
+  customerId,
+  conversationId
+) => {
+  try {
+    const conversation = await Conversation.findByIdAndUpdate(
+      conversationId,
+      {
+        $set: {
+          participants: [
+            { participantId: userId, participantModel: "User" },
+            { participantId: customerId, participantModel: "Customer" },
+          ],
+        },
+      },
+      { new: true }
+    );
+
+    return conversation;
+  } catch (error) {
+    console.error("Error updating conversation:", error);
+    throw error;
+  }
+};
+
 export const getConversationsWithPopulatedParticipants = async (
   type,
   limit,
