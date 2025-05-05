@@ -202,7 +202,9 @@ export const sendMessage = async (req, res, next) => {
 
     for (const connectedUser of connectedUsers) {
       const userId = connectedUser.participantId;
-      await incrementUnreadCount(conversationId, userId);
+      if (conversation.conversationType === "user-to-user") {
+        await incrementUnreadCount(conversationId, userId);
+      }
       sendEventToUser(userId, messageData, "message", sendToAdmin);
     }
 
@@ -416,7 +418,9 @@ export const forwardMessage = async (req, res, next) => {
 
     for (const connectedUser of connectedUsers) {
       const userId = connectedUser.participantId;
-      await incrementUnreadCount(conversationId, userId);
+      if (conversation.conversationType === "user-to-user") {
+        await incrementUnreadCount(conversationId, userId);
+      }
       sendEventToUser(userId, messageData, "message", sendToAdmin);
     }
 
@@ -584,7 +588,9 @@ export const sendTemplate = async (req, res, next) => {
 
       for (const connectedUser of connectedUsers) {
         const userId = connectedUser.participantId;
-        await incrementUnreadCount(conversationId, userId);
+        if (conversation.conversationType === "user-to-user") {
+          await incrementUnreadCount(conversationId, userId);
+        }
         sendEventToUser(userId, messageData, "message", sendToAdmin);
       }
     }
@@ -649,7 +655,9 @@ export const sendTemplate = async (req, res, next) => {
 
       for (const connectedUser of connectedUsers) {
         const userId = connectedUser.participantId;
-        await incrementUnreadCount(conversationId, userId);
+        if (conversation.conversationType === "user-to-user") {
+          await incrementUnreadCount(conversationId, userId);
+        }
         sendEventToUser(userId, messageData, "message", sendToAdmin);
       }
     }
