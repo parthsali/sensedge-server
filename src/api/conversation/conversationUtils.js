@@ -87,6 +87,10 @@ export const getConversationsWithPopulatedParticipants = async (
         path: "lastMessage",
         model: "Message",
         select: "-__v",
+        populate: {
+          path: "author",
+          select: "name",
+        },
       })
       .sort({ updatedAt: -1 })
       .limit(limit)
