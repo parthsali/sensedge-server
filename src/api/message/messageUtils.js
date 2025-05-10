@@ -4,6 +4,7 @@ import {
   sendFile,
 } from "../../services/waboxappService.js";
 import { getFileSignedUrl } from "../../services/awsService.js";
+import { logDebug, logError, logInfo } from "../../utils/logger.js";
 
 export const sendTextMessage = async (message, customer) => {
   try {
@@ -11,22 +12,17 @@ export const sendTextMessage = async (message, customer) => {
     const message_id = message._id;
     const text = message.text;
 
-    console.log("Sending text message:", {
-      phone,
-      message_id,
-      text,
-    });
-
     const response = await sendText(phone, message_id, text);
-
-    console.log("Response from Waboxapp:", response);
 
     if (!response.success) {
       message.status = "failed";
       await message.save();
     }
+    logDebug(
+      `WABOXAPP : Sent text message to ${phone} with ID ${message_id} & status ${message.status}`
+    );
   } catch (error) {
-    console.error("Error sending text message:", error);
+    logError(error);
   }
 };
 
@@ -41,8 +37,12 @@ export const sendImageMessage = async (message, customer) => {
       message.status = "failed";
       await message.save();
     }
+
+    logDebug(
+      `WABOXAPP : Sent image message to ${phone} with ID ${message_id} & status ${message.status}`
+    );
   } catch (error) {
-    console.error("Error sending image message:", error);
+    logError(error);
   }
 };
 
@@ -57,7 +57,10 @@ export const sendFileMessage = async (message, customer) => {
       message.status = "failed";
       await message.save();
     }
+    logDebug(
+      `WABOXAPP : Sent file message to ${phone} with ID ${message_id} & status ${message.status}`
+    );
   } catch (error) {
-    console.error("Error sending file message:", error);
+    logError(error);
   }
 };

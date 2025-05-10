@@ -8,6 +8,7 @@ import {
   getConversationsWithPopulatedParticipants,
   updateUserToCustomerConversation,
 } from "./conversationUtils.js";
+import { logDebug, logInfo } from "../../utils/logger.js";
 
 export const getAllConversations = async (req, res, next) => {
   try {
@@ -35,7 +36,11 @@ export const getAllConversations = async (req, res, next) => {
         );
       }
     }
-
+    logDebug(
+      `Conversations fetched successfully for ${
+        req.user?.email || "unknown user"
+      }`
+    );
     res
       .status(200)
       .json({ message: "Conversations fetched successfully", conversations });
@@ -83,6 +88,12 @@ export const getUserConversations = async (req, res, next) => {
       }
     }
 
+    logDebug(
+      `Conversations fetched successfully for ${
+        req.user?.email || "unknown user"
+      }`
+    );
+
     res.status(200).json({ conversations });
   } catch (error) {
     next(createHttpError(500, "Internal server error"));
@@ -119,6 +130,11 @@ export const getConversationMessages = async (req, res, next) => {
       }
     }
 
+    logDebug(
+      `Messages fetched successfully for conversation ${req.params.id} by ${
+        req.user?.email || "unknown user"
+      }`
+    );
     res
       .status(200)
       .json({ message: "Messages fetched successfully", messages });
@@ -224,6 +240,8 @@ export const reassignConversation = async (req, res, next) => {
       conversationId
     );
 
+    logInfo(`Conversation reassigned successfully: ${conversationId}`);
+
     res.status(200).json({ message: "Conversation reassigned successfully" });
   } catch (error) {
     next(createHttpError(500, "Internal server error"));
@@ -279,8 +297,6 @@ export const searchConversation = async (req, res, next) => {
           .includes(query.toLowerCase())
       );
     });
-
-    console.log("Filtered conversations:", filteredConversations);
 
     for (const conversation of filteredConversations) {
       if (["image", "video", "file"].includes(conversation.lastMessage?.type)) {

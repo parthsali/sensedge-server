@@ -9,6 +9,7 @@ import fs from "fs";
 import path from "path";
 import User from "../user/userModel.js";
 import { createUserToCustomerConversation } from "../conversation/conversationUtils.js";
+import { logInfo, logDebug } from "../../utils/logger.js";
 
 const nanoid = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 12);
 
@@ -52,10 +53,19 @@ export const createCustomer = async (req, res, next) => {
     });
 
     await customer.save();
+    logInfo(
+      `Customer created successfully: ${customer._id} by ${
+        req.user?.email || "unknown user"
+      }`
+    );
 
     await createUserToCustomerConversation(
       customer.assigned_user,
       customer._id
+    );
+
+    logInfo(
+      `Conversation created for customer: ${customer._id} and user: ${customer.assigned_user}`
     );
 
     res.status(201).json({
@@ -141,6 +151,12 @@ export const createCustomers = async (req, res, next) => {
       );
     }
 
+    logInfo(
+      `Customers created successfully: ${customers
+        .map((customer) => customer.name)
+        .join(", ")}`
+    );
+
     res.status(201).json({
       message: "Customers created successfully",
       customers,
@@ -199,7 +215,7 @@ export const getCustomers = async (req, res, next) => {
     );
 
     const totalCustomers = await Customer.countDocuments();
-
+    logDebug(`getCustomers called by ${req.user?.email || "unknown user"}`);
     res.status(200).json({
       message: "Customers retrieved successfully",
       customers: customersWithConversations,
@@ -238,6 +254,13 @@ export const updateCustomer = async (req, res, next) => {
     customer.assigned_user = assigned_user;
 
     await customer.save();
+
+    logInfo(
+      `Customer updated successfully: ${customer._id} by ${
+        req.user?.email || "unknown user"
+      }`
+    );
+
     res.status(200).json({
       message: "Customer updated successfully",
       customer,
@@ -258,6 +281,7 @@ export const getCustomer = async (req, res, next) => {
       return next(createHttpError(404, "Customer not found"));
     }
 
+    logDebug(`getCustomer called by ${req.user?.email || "unknown user"}`);
     res.status(200).json({
       message: "Customer retrieved successfully",
       customer,
@@ -331,8 +355,6 @@ export const bulkAdd = async (req, res, next) => {
       const customerId = customer?.insertOne?.document?._id;
       const assignedUserId = customer?.insertOne?.document?.assigned_user;
 
-      console.log("customerId", customerId);
-      console.log("assignedUserId", assignedUserId);
       if (customerId && assignedUserId) {
         console.log(
           "Creating conversation for customerId",

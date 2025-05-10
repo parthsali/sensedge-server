@@ -2,6 +2,7 @@ import nodemailer from "nodemailer";
 import fs from "fs/promises";
 import createHttpError from "http-errors";
 import { config } from "../config/config.js";
+import { logError, logInfo } from "../utils/logger.js";
 
 const transporter = nodemailer.createTransport({
   host: config.SMTP_HOST,
@@ -28,7 +29,6 @@ export const sendUserDetailsTemplate = async (
   password,
   login_url = `${config.FRONTEND_URL}/login`
 ) => {
-  console.log("Config in email service", config);
   try {
     const htmlTemplate = await fs.readFile(
       "src/templates/userDetails.html",
@@ -49,8 +49,11 @@ export const sendUserDetailsTemplate = async (
     };
 
     await transporter.sendMail(mailOptions);
+    logInfo(
+      `SMTP : Email sent to ${email} with subject: User Details - Sensedge CRM`
+    );
   } catch (error) {
-    console.log(error);
+    logError(error);
     throw createHttpError(500, "Error sending email");
   }
 };
@@ -80,8 +83,11 @@ export const sendPasswordResetTemplate = async (
     };
 
     await transporter.sendMail(mailOptions);
+    logInfo(
+      `SMTP : Email sent to ${email} with subject: Password Reset - Sensedge CRM`
+    );
   } catch (error) {
-    console.log(error);
+    logError(error);
     throw createHttpError(500, "Error sending email");
   }
 };

@@ -11,6 +11,7 @@ import { generateToken, verifyToken } from "../../utils/jwtUtils.js";
 import { sendPasswordResetTemplate } from "../../services/emailService.js";
 
 import { customAlphabet } from "nanoid";
+import { logDebug, logInfo } from "../../utils/logger.js";
 
 const nanoid = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 12);
 
@@ -40,6 +41,8 @@ export const login = async (req, res, next) => {
       role: user.role,
     });
 
+    logInfo(`User ${user.email} logged in successfully`);
+
     res.status(200).json({ message: "Login successful", auth_token, user });
   } catch (error) {
     next(error);
@@ -63,6 +66,8 @@ export const me = async (req, res, next) => {
     if (!userData) {
       throw createHttpError(404, "User not found");
     }
+
+    logDebug(`User details fetched successfully for ${userData.email}`);
 
     res.status(200).json({
       message: "User details fetched successfully",
@@ -106,6 +111,8 @@ export const forgotPassword = async (req, res, next) => {
       reset_url
     );
 
+    logInfo(`Password reset OTP sent to ${user.email}`);
+
     res.status(200).json({ message: "OTP sent to your email" });
   } catch (error) {
     next(error);
@@ -134,6 +141,8 @@ export const verifyOTP = async (req, res, next) => {
       },
       "30m"
     );
+
+    logInfo(`OTP verified successfully for ${email}`);
 
     res.status(200).json({ message: "OTP verified successfully", token });
   } catch (error) {
@@ -169,6 +178,8 @@ export const resetPassword = async (req, res, next) => {
 
     await user.save();
 
+    logInfo(`Password reset successfully for ${user.email}`);
+
     res.status(200).json({ message: "Password reset successful" });
   } catch (error) {
     next(error);
@@ -195,6 +206,8 @@ export const register = async (req, res, next) => {
     });
 
     await user.save();
+
+    logInfo(`Admin registered successfully: ${user.email}`);
 
     res.status(201).json({ message: "Admin Registered", auth_token });
   } catch (error) {

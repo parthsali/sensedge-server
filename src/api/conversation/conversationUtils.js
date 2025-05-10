@@ -174,12 +174,6 @@ export const getConversationsWithPopulatedParticipants = async (
 
 export const incrementUnreadCount = async (conversationId, userId) => {
   try {
-    console.log(
-      "Incrementing unread count for conversationId:",
-      conversationId,
-      "userId:",
-      userId
-    );
     const conversation = await Conversation.findOneAndUpdate(
       {
         _id: conversationId,
@@ -200,12 +194,6 @@ export const incrementUnreadCount = async (conversationId, userId) => {
 
 export const decrementUnreadCount = async (conversationId, userId) => {
   try {
-    console.log(
-      "Decrementing unread count for conversationId:",
-      conversationId,
-      "userId:",
-      userId
-    );
     const conversation = await Conversation.findOneAndUpdate(
       {
         _id: conversationId,

@@ -7,7 +7,7 @@ import Message from "../message/messageModel.js";
 import Template from "../template/templateModel.js";
 import Config from "../user/configModel.js";
 import { createUserToUserConversation } from "../conversation/conversationUtils.js";
-import { logInfo } from "../../utils/logger.js";
+import { logDebug, logInfo } from "../../utils/logger.js";
 
 import { deleteFile } from "../../services/awsService.js";
 
@@ -39,7 +39,7 @@ export const getUsers = async (req, res, next) => {
 
     // get total count of users
     const totalUsers = await User.countDocuments({ role: "user" });
-
+    logDebug(`getUsers called by ${req.user?.email || "unknown user"}}`);
     res.status(200).json({
       message: "Users fetched",
       users: usersData,
@@ -70,7 +70,7 @@ export const getUser = async (req, res, next) => {
       ...user._doc,
       customers,
     };
-
+    logDebug(`getUser called by ${req.user?.email || "unknown user"}`);
     res.status(200).json({
       message: "User fetched",
       user: userData,
@@ -198,6 +198,8 @@ export const deactivateUser = async (req, res, next) => {
       return next(createHttpError(404, "User not found"));
     }
 
+    logInfo(`User deactivated: ${user.email}`);
+
     res.status(200).json({ message: "User deactivated" });
   } catch (error) {
     next(error);
@@ -217,6 +219,8 @@ export const reactivateUser = async (req, res, next) => {
     if (!user) {
       return next(createHttpError(404, "User not found"));
     }
+
+    logInfo(`User reactivated: ${user.email}`);
 
     res.status(200).json({ message: "User reactivated" });
   } catch (error) {
@@ -247,9 +251,11 @@ export const createAdmin = async (req, res, next) => {
     const newAdmin = new User({ name, email, password, role: "admin" });
 
     await newAdmin.save();
+    logInfo(`Admin created: ${newAdmin.email}`);
 
     // Send the user details to the user's email
     await sendUserDetailsTemplate(name, email, password);
+    logInfo(`User details sent to email: ${email}`);
 
     res.status(201).json({ message: "Admin created" });
   } catch (error) {

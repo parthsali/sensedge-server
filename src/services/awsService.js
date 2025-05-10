@@ -8,6 +8,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { config } from "../config/config.js";
 import { Upload } from "@aws-sdk/lib-storage";
 import fs from "fs";
+import { logDebug } from "../utils/logger.js";
 
 const s3 = new S3Client({
   region: config.BUCKET_REGION,
@@ -18,11 +19,8 @@ const s3 = new S3Client({
 });
 
 export const addFile = async (folder = "general", file) => {
-  console.log("File" , file);
   const filePath = file.path; // Get file path from multer
   const fileName = file.filename; // Get the stored file name
-
-
 
   try {
     const fileStream = fs.createReadStream(filePath);
@@ -39,9 +37,13 @@ export const addFile = async (folder = "general", file) => {
 
     await upload.done();
 
+    logDebug(
+      `File uploaded successfully to S3: ${fileName} in folder: ${folder}`
+    );
+
     return folder + "/" + fileName;
   } catch (error) {
-    console.error("Error uploading file:", error);
+    logError(error);
     throw error;
   } finally {
     fs.unlinkSync(filePath);
@@ -57,8 +59,9 @@ export const deleteFile = async (fileName) => {
   try {
     await s3.send(new DeleteObjectCommand(params));
   } catch (error) {
-    console.log("Error", error);
+    logError(error);
   }
+  logDebug(`File deleted successfully from S3: ${fileName}`);
 };
 
 export const getFileSignedUrl = async (fileName) => {

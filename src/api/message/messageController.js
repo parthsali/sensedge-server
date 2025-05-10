@@ -8,6 +8,7 @@ import { getFileSignedUrl } from "../../services/awsService.js";
 import Config from "../user/configModel.js";
 import Customer from "../customer/customerModel.js";
 import { customAlphabet } from "nanoid";
+import { logInfo, logDebug, logError } from "../../utils/logger.js";
 
 import fetch from "node-fetch";
 import fs from "fs";
@@ -22,7 +23,6 @@ import {
   decrementUnreadCount,
   incrementUnreadCount,
 } from "../conversation/conversationUtils.js";
-import { on } from "events";
 
 const nanoid = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 12);
 
@@ -80,27 +80,31 @@ export const sendMessage = async (req, res, next) => {
         lastMessage: newMessage._id,
       });
 
-      console.log("Message sent successfully");
-
-      console.log("Conversation type", conversation.conversationType);
-
       if (conversation.conversationType === "user-to-customer") {
         const customerId = conversation.participants.find((participant) =>
           participant.participantId.startsWith("customer-")
         )?.participantId;
 
-        console.log("Customer ID", customerId);
-
         const customer = await Customer.findById(customerId);
-
-        console.log("Customer", customer);
 
         if (!customer) {
           throw createHttpError(404, "Customer not found");
         }
 
         await sendTextMessage(newMessage, customer);
+
+        logInfo(
+          `User-to-Customer : Message sent successfully: ${newMessage._id} by ${
+            req.user?.email || "unknown user"
+          } with status ${newMessage.status}`
+        );
       }
+
+      logInfo(
+        `User-to-User : Message sent successfully: ${newMessage._id} by ${
+          req.user?.email || "unknown user"
+        } with status ${newMessage.status}`
+      );
 
       const messageData = await Message.findOne({
         _id: newMessage._id,
@@ -115,8 +119,6 @@ export const sendMessage = async (req, res, next) => {
             participant.participantId.startsWith("admin-"))
       );
 
-      console.log("Connected users", connectedUsers);
-
       const sendToAdmin = conversation.conversationType === "user-to-customer";
 
       if (sendToAdmin) {
@@ -125,7 +127,7 @@ export const sendMessage = async (req, res, next) => {
 
       for (const connectedUser of connectedUsers) {
         const userId = connectedUser.participantId;
-        console.log("Calling incrementUnreadCount for user", userId);
+
         if (conversation.conversationType === "user-to-user") {
           await incrementUnreadCount(conversationId, userId);
         }
@@ -175,9 +177,19 @@ export const sendMessage = async (req, res, next) => {
       } else {
         await sendFileMessage(newMessage, customer);
       }
+
+      logInfo(
+        `User-to-Customer : Message sent successfully: ${newMessage._id} by ${
+          req.user?.email || "unknown user"
+        } with status ${newMessage.status}`
+      );
     }
 
-    console.log("File message sent successfully");
+    logInfo(
+      `User-to-User : Message sent successfully: ${newMessage._id} by ${
+        req.user?.email || "unknown user"
+      } with status ${newMessage.status}`
+    );
 
     const messageData = await Message.findOne({
       _id: newMessage._id,
@@ -250,8 +262,6 @@ export const updateStarredMessage = async (req, res, next) => {
 
     await message.save();
 
-    console.log("Message starred status updated", message);
-
     return res.status(200).json({ message: "Message starred status updated" });
   } catch (err) {
     next(err);
@@ -287,6 +297,11 @@ export const updateStatus = async (req, res, next) => {
     message.status = status;
 
     await message.save();
+
+    logDebug(
+      `Message status updated successfully: ${message._id} 
+       with status ${message.status}`
+    );
 
     const messageData = await Message.findOne({
       _id: message._id,
@@ -398,7 +413,21 @@ export const forwardMessage = async (req, res, next) => {
       } else {
         await sendFileMessage(newMessage, customer);
       }
+      logInfo(
+        `User-to-Customer : Message forwarded successfully: ${
+          newMessage._id
+        } by ${req.user?.email || "unknown user"} with status ${
+          newMessage.status
+        }`
+      );
     }
+
+    logInfo(
+      `User-to-User : Message forwarded successfully: ${newMessage._id} by ${
+        req.user?.email || "unknown user"
+      } with status ${newMessage.status}`
+    );
+
     const messageData = await Message.findOne({
       _id: newMessage._id,
     })
@@ -570,7 +599,23 @@ export const sendTemplate = async (req, res, next) => {
         }
 
         await sendTextMessage(newMessage, customer);
+
+        logInfo(
+          `User-to-Customer : Template (${templateId}) text successfully: ${
+            newMessage._id
+          } by ${req.user?.email || "unknown user"} with status ${
+            newMessage.status
+          }`
+        );
       }
+
+      logInfo(
+        `User-to-User : Template (${templateId}) text successfully: ${
+          newMessage._id
+        } by ${req.user?.email || "unknown user"} with status ${
+          newMessage.status
+        }`
+      );
 
       const messageData = await Message.findOne({
         _id: newMessage._id,
@@ -635,7 +680,23 @@ export const sendTemplate = async (req, res, next) => {
         } else {
           await sendFileMessage(newMessage, customer);
         }
+
+        logInfo(
+          `User-to-Customer : Template (${templateId}) file successfully: ${
+            newMessage._id
+          } by ${req.user?.email || "unknown user"} with status ${
+            newMessage.status
+          }`
+        );
       }
+
+      logInfo(
+        `User-to-User : Template (${templateId}) file successfully: ${
+          newMessage._id
+        } by ${req.user?.email || "unknown user"} with status ${
+          newMessage.status
+        }`
+      );
 
       const messageData = await Message.findOne({
         _id: newMessage._id,
@@ -710,7 +771,7 @@ export const searchMessage = async (req, res, next) => {
 
 export const handleWebhook = async (req, res, next) => {
   try {
-    console.log("Received webhook", req.body);
+    logDebug(`Webhook received: ${JSON.stringify(req.body, null, 2)}`);
     const { event } = req.body;
 
     if (event === "message") {
@@ -768,12 +829,14 @@ export const handleWebhook = async (req, res, next) => {
           customer.assigned_user,
           customer._id
         );
+        logInfo(
+          `Webhook : Conversation created for customer: ${customer._id} and user: ${conversation._id}`
+        );
       }
 
       let newMessage;
       if (messageDir === "o") {
         if (messageCuid && !messageCuid.startsWith("message")) {
-          console.log("WEBHOOK OUTPUT MESSAGE", messageCuid);
           if (msgType === "text") {
             newMessage = new Message({
               _id: messageCuid,
@@ -814,7 +877,6 @@ export const handleWebhook = async (req, res, next) => {
               }
               const buffer = await response.buffer();
               await fs.promises.writeFile(filePath, buffer);
-              console.log("File saved:", filePath);
             } catch (fetchError) {
               console.error("Error fetching file:", fetchError);
               return res.status(500).json({ error: "Error fetching file" });
@@ -830,9 +892,7 @@ export const handleWebhook = async (req, res, next) => {
             let uploadedFile;
             try {
               uploadedFile = await addFile("messages", file);
-              console.log("File uploaded", uploadedFile);
             } catch (uploadError) {
-              console.error("Error uploading file:", uploadError);
               return res.status(500).json({ error: "Error uploading file" });
             }
 
@@ -890,7 +950,6 @@ export const handleWebhook = async (req, res, next) => {
             }
             const buffer = await response.buffer();
             await fs.promises.writeFile(filePath, buffer);
-            console.log("File saved:", filePath);
           } catch (fetchError) {
             console.error("Error fetching file:", fetchError);
             return res.status(500).json({ error: "Error fetching file" });
@@ -906,7 +965,6 @@ export const handleWebhook = async (req, res, next) => {
           let uploadedFile;
           try {
             uploadedFile = await addFile("messages", file);
-            console.log("File uploaded", uploadedFile);
           } catch (uploadError) {
             console.error("Error uploading file:", uploadError);
             return res.status(500).json({ error: "Error uploading file" });
@@ -927,7 +985,9 @@ export const handleWebhook = async (req, res, next) => {
       }
 
       if (newMessage) {
-        console.log("WEBHOOK MESSAGE", newMessage);
+        logInfo(
+          `Webhook : New message with ID ${newMessage._id} created for conversation: ${conversation._id} and user: ${customer._id}`
+        );
 
         await newMessage.save();
 
@@ -1022,7 +1082,6 @@ export const handleWebhook = async (req, res, next) => {
       throw createHttpError(400, "Invalid event type");
     }
   } catch (error) {
-    console.log("Error in webhook", error);
     next(error);
   }
 };
@@ -1044,14 +1103,16 @@ export const handleSSE = async (req, res, next) => {
     const clientId = `${user._id}-${nanoid()}`;
     const newClient = { id: clientId, userId: user._id, res };
     clients.push(newClient);
-    console.log(`${clientId} Connected`);
+    logDebug(
+      `New SSE connection established for user ${user._id} with client ID ${clientId}`
+    );
 
     req.on("close", () => {
-      console.log(`${clientId} Connection closed`);
+      logDebug(`SSE connection closed for client ID ${clientId}`);
       clients = clients.filter((c) => c.id !== clientId);
     });
   } catch (error) {
-    console.error("Error in SSE:", error);
+    logError(error);
     res.status(500).end();
   }
 };
@@ -1063,12 +1124,10 @@ const sendEventToUser = (
   sendToAdmin = true
 ) => {
   for (let client of clients) {
-    console.log("Client ID", client.id, "User ID", client.userId);
     if (
       (sendToAdmin && client.userId.startsWith("admin")) ||
       client.userId === userId
     ) {
-      console.log("Sending event to client", client.userId, type);
       client.res.write(
         `event: ${type}\ndata: ${JSON.stringify({ event: type, message })}\n\n`
       );

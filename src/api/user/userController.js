@@ -2,6 +2,7 @@ import Config from "./configModel.js";
 import createHttpError from "http-errors";
 import User from "./userModel.js";
 import Customer from "../customer/customerModel.js";
+import { logDebug, logInfo } from "../../utils/logger.js";
 
 export const getDefaultUser = async (req, res, next) => {
   try {
@@ -20,7 +21,9 @@ export const getDefaultUser = async (req, res, next) => {
     if (!defaultUser) {
       throw createHttpError(404, "Default user not found");
     }
-
+    logDebug(
+      `getDefaultUser called by ${req.user.email} with default user ${defaultUser._id}`
+    );
     res.status(200).json({ message: "Default user fetched", defaultUser });
   } catch (error) {
     next(error);
@@ -52,7 +55,9 @@ export const setDefaultUser = async (req, res, next) => {
 
     config.defaultUser = userId;
     await config.save();
-
+    logInfo(
+      `Default user updated by ${req.user.email} to ${user._id} with name ${user.name} & email ${user.email}`
+    );
     res.status(200).json({ message: "Default user set", defaultUser: user });
   } catch (error) {
     next(error);
@@ -129,6 +134,10 @@ export const setAdmin = async (req, res, next) => {
 
     config.admin = userId;
     await config.save();
+
+    logInfo(
+      `Admin updated by ${req.user.email} to ${admin._id} with name ${admin.name} & email ${admin.email}`
+    );
 
     res.status(200).json({ message: "Admin set", admin });
   } catch (error) {

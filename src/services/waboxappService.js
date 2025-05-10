@@ -1,5 +1,6 @@
 import { config } from "../config/config.js";
 import axios from "axios";
+import { logError } from "../utils/logger.js";
 
 export const sendText = async (phone, message_id, text) => {
   try {
@@ -7,8 +8,6 @@ export const sendText = async (phone, message_id, text) => {
     const token = config.WABOXAPP_TOKEN;
 
     const url = `${config.WABOXAPP_ENDPOINT}/send/chat`;
-
-    console.log(url);
 
     const response = await axios.post(url, null, {
       params: {
@@ -20,8 +19,6 @@ export const sendText = async (phone, message_id, text) => {
       },
     });
 
-    console.log("Response Data", response.data);
-
     const data = response.data;
 
     if (data.success) {
@@ -30,7 +27,7 @@ export const sendText = async (phone, message_id, text) => {
       throw new Error("Message not sent");
     }
   } catch (error) {
-    console.log(error);
+    logError(error);
     return { success: false, error: error.message };
   }
 };
@@ -60,7 +57,7 @@ export const sendImage = async (phone, message_id, image_url) => {
       throw new Error("Image not sent");
     }
   } catch (error) {
-    console.log(error);
+    logError(error);
     return { success: false, error: error.message };
   }
 };
@@ -90,7 +87,7 @@ export const sendFile = async (phone, message_id, file_url) => {
       throw new Error("File not sent");
     }
   } catch (error) {
-    console.log(error);
+    logError(error);
     return { success: false, error: error.message };
   }
 };

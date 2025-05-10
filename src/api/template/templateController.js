@@ -9,6 +9,7 @@ import {
   getFileSignedUrl,
   deleteFile,
 } from "../../services/awsService.js";
+import { logInfo, logDebug } from "../../utils/logger.js";
 
 export const getTemplates = async (req, res, next) => {
   try {
@@ -38,6 +39,7 @@ export const getTemplates = async (req, res, next) => {
 
     const totalTemplates = await Template.countDocuments();
 
+    logDebug(`getTemplates called by ${req.user.email}`);
     res
       .status(200)
       .json({ message: "Templates fetched", templates, totalTemplates });
@@ -64,6 +66,7 @@ export const getTemplate = async (req, res, next) => {
       file.url = await getFileSignedUrl(file.url);
     }
 
+    logDebug(`getTemplate called by ${req.user.email}`);
     res.status(200).json({ message: "Template fetched", template });
   } catch (error) {
     next(error);
@@ -105,8 +108,6 @@ export const createTemplate = async (req, res, next) => {
 
     const user_id = req.user._id;
 
-    console.log("user id", user_id);
-
     const template = new Template({
       name,
       text,
@@ -119,7 +120,7 @@ export const createTemplate = async (req, res, next) => {
     for (const file of template.files) {
       file.url = await getFileSignedUrl(file.url);
     }
-
+    logInfo(`Template created by ${req.user.email} with name ${name}`);
     res.status(201).json({ message: "Template created", template });
   } catch (error) {
     next(error);
@@ -184,6 +185,8 @@ export const updateTemplate = async (req, res, next) => {
     for (const file of template.files) {
       file.url = await getFileSignedUrl(file.url);
     }
+
+    logInfo(`Template updated by ${req.user.email} with name ${name}`);
 
     res.status(200).json({ message: "Template updated", template });
   } catch (error) {
@@ -261,7 +264,7 @@ export const uploadImage = async (req, res, next) => {
     if (!req.file) {
       throw createHttpError(400, "Please upload an image");
     }
-    console.log("req.file", req.file);
+
     const fileName = await addFile("templates", req.file);
 
     res.status(200).json({ message: "Image uploaded", fileName });
