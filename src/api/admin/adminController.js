@@ -7,6 +7,7 @@ import Message from "../message/messageModel.js";
 import Template from "../template/templateModel.js";
 import Config from "../user/configModel.js";
 import { createUserToUserConversation } from "../conversation/conversationUtils.js";
+import { logInfo } from "../../utils/logger.js";
 
 import { deleteFile } from "../../services/awsService.js";
 
@@ -108,8 +109,12 @@ export const createUser = async (req, res, next) => {
 
     await newUser.save();
 
+    logInfo(`User created: ${newUser.email}`);
+
     // Send the user details to the user's email
     await sendUserDetailsTemplate(name, email, password);
+
+    logInfo(`User details sent to email: ${email}`);
 
     const users = await User.find(
       {
@@ -123,9 +128,8 @@ export const createUser = async (req, res, next) => {
         continue;
       }
       await createUserToUserConversation(newUser._id, user._id);
+      logInfo(`User conversation created: ${newUser._id} <-> ${user._id}`);
     }
-
-    console.log(`User created: ${newUser.email}`);
 
     res.status(201).json({ message: "User created" });
   } catch (error) {
