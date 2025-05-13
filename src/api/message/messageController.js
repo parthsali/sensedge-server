@@ -1128,6 +1128,11 @@ const sendEventToUser = (
       (sendToAdmin && client.userId.startsWith("admin")) ||
       client.userId === userId
     ) {
+      logDebug(
+        `Sending SSE event to user ${
+          client.userId
+        } event type: ${type} message: ${JSON.stringify(message)}`
+      );
       client.res.write(
         `event: ${type}\ndata: ${JSON.stringify({ event: type, message })}\n\n`
       );

@@ -188,11 +188,11 @@ export const resetPassword = async (req, res, next) => {
 
 export const register = async (req, res, next) => {
   try {
-    const { name, email, password } = req.body;
+    const { employeeId, name, email, password } = req.body;
 
     const user = new User({
       _id: `admin-${nanoid()}`,
-      employeeId: `admin-01`,
+      employeeId,
       name,
       email,
       password,
